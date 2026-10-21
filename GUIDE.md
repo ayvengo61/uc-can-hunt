@@ -118,9 +118,9 @@ If the board does not answer after the update, replug USB once more and wait for
 Use this mode when you do not know which CAN frame carries the data you need (RPM, speed, a steering-wheel button).
 You sit in the car, Claude puts short instructions on the screen, records the bus and finds the field itself.
 
-One-time setup. The easiest way: run **`УСТАНОВКА.bat`** from the unpacked folder (double-click). It checks Python,
+One-time setup. The easiest way: run **`SETUP.bat`** from the unpacked folder (double-click). It checks Python,
 installs the required packages, installs Claude Code if needed and connects the plugin; if something is missing it
-tells you what to do and opens the right website (messages are in Russian). Claude Code requires a paid Claude plan
+tells you what to do and opens the right website. (`УСТАНОВКА.bat` is the same installer with Russian messages.) Claude Code requires a paid Claude plan
 (Pro or Max) or API billing; it does not work on a free account.
 
 If you prefer to do it by hand:

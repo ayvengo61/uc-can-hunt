@@ -15,7 +15,7 @@ CAN-шине автомобиля. / UniversalController monitor and a Claude Co
 ## Установка плагина / Plugin install
 
 Проще всего запустить `УСТАНОВКА.bat` из папки пакета: он проверит Python, поставит пакеты и подключит плагин. /
-Easiest: run `УСТАНОВКА.bat` from the package folder: it checks Python, installs packages and connects the plugin. Вручную / manually:
+Easiest: run `SETUP.bat` (English) from the package folder: it checks Python, installs packages and connects the plugin. Вручную / manually:
 
 ```
 /plugin marketplace add ayvengo61/uc-can-hunt
