@@ -9,13 +9,13 @@ CAN-шине автомобиля. / UniversalController monitor and a Claude Co
                                   Claude Code: навык can-hunt
 ```
 
-- **Инструкция по-русски:** [ИНСТРУКЦИЯ.md](ИНСТРУКЦИЯ.md) — скачать, запустить, настройки, сниффер, прошивка, работа с Claude.
-- **English guide:** [GUIDE.md](GUIDE.md) — download, run, settings, sniffer, flashing, working with Claude.
+- **По-русски:** папка `RU` — [ИНСТРУКЦИЯ.md](RU/ИНСТРУКЦИЯ.md) и установщик `УСТАНОВКА.bat` — скачать, запустить, настройки, сниффер, прошивка, работа с Claude.
+- **In English:** folder `EN` — [GUIDE.md](EN/GUIDE.md) and the `SETUP.bat` installer — download, run, settings, sniffer, flashing, working with Claude.
 
 ## Установка плагина / Plugin install
 
-Проще всего запустить `УСТАНОВКА.bat` из папки пакета: он проверит Python, поставит пакеты и подключит плагин. /
-Easiest: run `SETUP.bat` (English) from the package folder: it checks Python, installs packages and connects the plugin. Вручную / manually:
+Проще всего запустить `RU\УСТАНОВКА.bat`: он проверит Python, поставит пакеты и подключит плагин. /
+Easiest: run `EN\SETUP.bat`: it checks Python, installs packages and connects the plugin. Вручную / manually:
 
 ```
 /plugin marketplace add ayvengo61/uc-can-hunt
