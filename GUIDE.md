@@ -118,12 +118,16 @@ If the board does not answer after the update, replug USB once more and wait for
 Use this mode when you do not know which CAN frame carries the data you need (RPM, speed, a steering-wheel button).
 You sit in the car, Claude puts short instructions on the screen, records the bus and finds the field itself.
 
-One-time setup:
+One-time setup. The easiest way: run **`УСТАНОВКА.bat`** from the unpacked folder (double-click). It checks Python,
+installs the required packages, installs Claude Code if needed and connects the plugin; if something is missing it
+tells you what to do and opens the right website (messages are in Russian). Claude Code requires a paid Claude plan
+(Pro or Max) or API billing; it does not work on a free account.
+
+If you prefer to do it by hand:
 
 1. **Python 3**: https://www.python.org/downloads/, during setup tick **Add python.exe to PATH**. Then run
    `pip install numpy pillow` in a command prompt.
-2. **Claude Code**: https://claude.ai/code. A paid Claude plan (Pro or Max) or API billing is required;
-   Claude Code does not work on a free account.
+2. **Claude Code**: https://claude.ai/code.
 3. The plugin. In Claude Code enter two commands:
 
 ```
