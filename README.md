@@ -19,8 +19,8 @@ CAN-шине автомобиля. / UniversalController monitor and a Claude Co
 /plugin install uc-can-hunt@uc-tools
 ```
 
-Нужны Windows, Python 3 с `numpy` и `pillow`, Claude Code (любой аккаунт). Платы поставляются прошитыми.
-Requires Windows, Python 3 with `numpy` and `pillow`, Claude Code (any account). Boards ship flashed.
+Нужны Windows, Python 3 с `numpy` и `pillow`, Claude Code (платный план Claude Pro/Max или оплата через API). Платы поставляются прошитыми.
+Requires Windows, Python 3 with `numpy` and `pillow`, Claude Code (paid Claude Pro/Max plan or API billing). Boards ship flashed.
 
 ## Состав / Contents
 

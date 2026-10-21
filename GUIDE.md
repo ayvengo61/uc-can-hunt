@@ -122,7 +122,8 @@ One-time setup:
 
 1. **Python 3**: https://www.python.org/downloads/, during setup tick **Add python.exe to PATH**. Then run
    `pip install numpy pillow` in a command prompt.
-2. **Claude Code**: https://claude.ai/code (any Claude account works).
+2. **Claude Code**: https://claude.ai/code. A paid Claude plan (Pro or Max) or API billing is required;
+   Claude Code does not work on a free account.
 3. The plugin. In Claude Code enter two commands:
 
 ```
