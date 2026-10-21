@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>UniversalController H723 — Dashboard</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 16px;
+    background: #0e1116;
+    color: #e6edf3;
+    font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+    font-size: 13px;
+  }
+  h1 { font-size: 18px; margin: 0 0 4px 0; }
+  .header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #30363d;
+  }
+  .conn { font-size: 11px; opacity: 0.7; }
+  .conn .ok { color: #3fb950; }
+  .conn .bad { color: #f85149; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+
+  .card {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    padding: 10px 12px;
+  }
+  .card h2 {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin: 0 0 8px 0;
+    color: #8b949e;
+    font-weight: 600;
+  }
+  .full { grid-column: 1 / -1; }
+
+  /* ===== Конфигурация ===== */
+  .cfgbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
+  .cfgbar button { padding: 5px 12px; background: #21262d; color: #e6edf3; border: 1px solid #30363d;
+    border-radius: 6px; cursor: pointer; font: inherit; }
+  .cfgbar button:hover { border-color: #8b949e; }
+  .cfgbar button.primary { background: #1f6f3a; border-color: #2ea043; }
+  #cfgStatus { font-size: 11px; color: #8b949e; margin-left: auto; }
+  #cfgStatus.err { color: #f85149; }
+  #cfgStatus.ok  { color: #3fb950; }
+  .cfgsub { margin: 14px 0 4px; color: #58a6ff; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; }
+  .cfgnote { font-size: 11px; color: #6e7681; margin: 2px 0 6px; }
+  .cfgtab td, .cfgtab th { padding: 3px 5px; }
+  .cfgtab input[type=number], .cfgtab select, .cfgrow input, .cfgrow select {
+    width: 78px; padding: 2px 4px; background: #0d1117; color: #e6edf3;
+    border: 1px solid #30363d; border-radius: 4px; font: inherit; }
+  .cfgtab select { width: auto; }
+  .cfgrow { display: inline-flex; align-items: center; gap: 6px; margin: 3px 16px 3px 0; }
+  .cfgrow label { color: #8b949e; font-size: 11px; }
+  [data-path].chg { border-color: #d29922 !important; outline: 1px solid #d29922; }
+  .cfg-grp { color: #6e7681; font-size: 11px; }
+
+  /* Защита прошивки */
+  .sec-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
+  .sec-row input {
+    flex: 1; min-width: 140px; padding: 6px 8px;
+    background: #0d1117; color: #e6edf3; border: 1px solid #30363d; border-radius: 6px;
+  }
+  .sec-row button {
+    padding: 6px 12px; background: #21262d; color: #e6edf3;
+    border: 1px solid #30363d; border-radius: 6px; cursor: pointer; font: inherit;
+  }
+  .sec-row button:hover { border-color: #8b949e; }
+  .sec-row button.danger { color: #f85149; border-color: #6e2a28; }
+  .rdp-ok   { color: #3fb950; }
+  .rdp-warn { color: #d29922; }
+  .rdp-bad  { color: #f85149; }
+
+  /* Inputs */
+  .ins, .outs, .dacs {
+    display: grid;
+    gap: 6px;
+  }
+  .ins  { grid-template-columns: repeat(8, 1fr); }
+  .outs { grid-template-columns: repeat(12, 1fr); }
+  .dacs { grid-template-columns: repeat(2, 1fr); }
+  .cell {
+    background: #0d1117;
+    border: 1px solid #21262d;
+    border-radius: 4px;
+    padding: 6px;
+    text-align: center;
+  }
+  .cell .lbl { font-size: 10px; color: #8b949e; }
+  .cell .val { font-size: 14px; font-weight: 600; margin-top: 2px; }
+  .cell .sub { font-size: 9px; color: #6e7681; margin-top: 2px; }
+  .cell.off  .val { color: #6e7681; }
+  .cell.on   .val { color: #3fb950; }
+  .cell.live .val { color: #58a6ff; }
+
+  /* Bus */
+  table { width: 100%; border-collapse: collapse; }
+  th, td {
+    text-align: left;
+    padding: 4px 8px;
+    font-size: 11px;
+    border-bottom: 1px solid #21262d;
+  }
+  th { color: #8b949e; text-transform: uppercase; font-weight: 600; font-size: 10px; }
+  .num { font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+
+  .pill {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 8px;
+    font-size: 10px;
+    font-weight: 600;
+  }
+  .pill-on  { background: #1f6f3a; color: #aff5c4; }
+  .pill-off { background: #322c2c; color: #8b949e; }
+  .age-fresh { color: #3fb950; }
+  .age-stale { color: #d29922; }
+  .age-dead  { color: #f85149; }
+
+  /* Bar */
+  .bar {
+    background: #21262d;
+    height: 4px;
+    border-radius: 2px;
+    overflow: hidden;
+    margin-top: 4px;
+  }
+  .bar > span {
+    display: block;
+    height: 100%;
+    background: #58a6ff;
+    transition: width 0.2s ease;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>UniversalController H723 <a href="/sniffer" style="font-size:13px;font-weight:normal;color:#58a6ff;text-decoration:none;margin-left:12px">CAN сниффер →</a></h1>
+    <div class="conn" id="conn">...</div>
+  </div>
+  <div id="uptime" class="num"></div>
+</div>
+
+<div class="grid">
+
+  <div class="card full">
+    <h2>Inputs (PA0..PA3, PA6, PA7, PC0, PC1)</h2>
+    <div class="ins" id="ins"></div>
+  </div>
+
+  <div class="card full">
+    <h2>Outputs (12 × PWM)</h2>
+    <div class="outs" id="outs"></div>
+  </div>
+
+  <div class="card">
+    <h2>DAC (PA4, PA5)</h2>
+    <div class="dacs" id="dacs"></div>
+  </div>
+
+  <div class="card">
+    <h2>Sleep / Power</h2>
+    <table>
+      <tr><td>Mode</td><td id="mode" class="num">—</td></tr>
+      <tr><td>Sleep count</td><td id="slp" class="num">—</td></tr>
+      <tr><td>IWDG resets</td><td id="iwdg" class="num">—</td></tr>
+      <tr><td>Uptime</td><td id="upt" class="num">—</td></tr>
+      <tr><td title="RDP — Readout Protection. 0 = прошивка читается снаружи, 1 = защищена (снятие стирает флеш)">Protection</td><td id="rdp" class="num">—</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>Firmware protection</h2>
+    <div class="sec-row">
+      <input id="sec_key" type="password" placeholder="ключ" autocomplete="off">
+      <button onclick="secLock()">Lock</button>
+      <button class="danger" onclick="secUnlock()">Unlock (erase!)</button>
+    </div>
+    <div id="sec_status" style="font-size:12px;opacity:.75;min-height:16px"></div>
+    <div style="font-size:12px;opacity:.6;margin-top:6px">
+      Lock — блокирует чтение прошивки, сама прошивка и конфиг остаются.
+      Unlock — <b>стирает весь флеш</b>, устройство перезагружается пустым.
+    </div>
+  </div>
+
+  <div class="card full">
+    <h2>CAN Buses (FDCAN1, FDCAN2, FDCAN3)</h2>
+    <table>
+      <thead><tr>
+        <th>#</th><th>Pins</th><th>State</th><th>Mode</th><th>Bitrate</th>
+        <th>Op</th><th>RX age</th><th>RX</th><th>TX</th><th>Err</th>
+        <th>LEC</th><th>DLEC</th><th>REC</th>
+      </tr></thead>
+      <tbody id="can_tbody"></tbody>
+    </table>
+  </div>
+
+  <div class="card full">
+    <h2>LIN Channels (USART2, USART3)</h2>
+    <table>
+      <thead><tr>
+        <th>#</th><th>Pins</th><th>State</th><th>Role</th><th>Baud</th>
+        <th>RX age</th><th>RX</th><th>TX</th><th>Err</th>
+      </tr></thead>
+      <tbody id="lin_tbody"></tbody>
+    </table>
+  </div>
+
+  <!-- ===== Конфигурация (рантайм, хранится во Flash контроллера) ===== -->
+  <div class="card full">
+    <h2>Configuration</h2>
+    <div class="cfgbar">
+      <button onclick="loadConfig()">Load</button>
+      <button class="primary" onclick="applyConfig()">Apply</button>
+      <button onclick="discardConfig()">Discard</button>
+      <button onclick="loadDefaults()">Defaults</button>
+      <span id="cfgStatus">нажми Load, чтобы прочитать конфиг с контроллера</span>
+    </div>
+    <div id="cfgEditor"></div>
+  </div>
+
+</div>
+
+<script>
+const CAN_PINS = ['PD0/PD1', 'PB5/PB6', 'PD12/PD13'];
+const LIN_PINS = ['PD5/PD6', 'PD8/PD9'];
+const IN_PINS  = ['PA0','PA1','PA2','PA3','PA6','PA7','PC0','PC1'];
+const LEC_NAMES = ['None','Stuff','Form','Ack','Bit1','Bit0','CRC','—'];
+
+function fmtUptime(ms) {
+  const s = Math.floor(ms / 1000);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const ss = s % 60;
+  if (h) return `${h}h ${m}m ${ss}s`;
+  if (m) return `${m}m ${ss}s`;
+  return `${ss}s`;
+}
+
+function fmtAge(ms) {
+  if (ms < 1000) return `<span class="age-fresh">${ms} ms</span>`;
+  if (ms < 60000) return `<span class="age-stale">${(ms/1000).toFixed(1)}s</span>`;
+  return `<span class="age-dead">${(ms/1000).toFixed(0)}s</span>`;
+}
+
+function renderInputs(arr) {
+  const el = document.getElementById('ins');
+  el.innerHTML = '';
+  arr.forEach((it, i) => {
+    let cls = 'cell';
+    let val = '—';
+    let sub = '';
+    if (it.mode === 'analog') {
+      cls += ' live';
+      val = `${(it.value/1000).toFixed(2)} V`;
+      sub = `${it.value} mV`;
+    } else if (it.mode === 'digital') {
+      cls += it.value ? ' on' : ' off';
+      val = it.value ? '1' : '0';
+      sub = 'digital';
+    } else {
+      cls += ' off';
+      val = '—';
+      sub = 'off';
+    }
+    el.innerHTML += `
+      <div class="${cls}">
+        <div class="lbl">in${i} ${IN_PINS[i]}</div>
+        <div class="val">${val}</div>
+        <div class="sub">${sub}</div>
+      </div>`;
+  });
+}
+
+function renderOutputs(arr) {
+  const el = document.getElementById('outs');
+  el.innerHTML = '';
+  arr.forEach((it, i) => {
+    const pct = (it.fill / 10).toFixed(1);
+    const cls = 'cell ' + (it.fill > 0 ? 'on' : 'off');
+    el.innerHTML += `
+      <div class="${cls}">
+        <div class="lbl">OUT${i}${it.invert ? ' inv' : ''}</div>
+        <div class="val">${pct}%</div>
+        <div class="bar"><span style="width:${pct}%"></span></div>
+      </div>`;
+  });
+}
+
+function renderDac(arr) {
+  const el = document.getElementById('dacs');
+  el.innerHTML = '';
+  arr.forEach((it, i) => {
+    const v = (it.mv / 1000).toFixed(2);
+    el.innerHTML += `
+      <div class="cell live">
+        <div class="lbl">DAC${i} ${i ? 'PA5' : 'PA4'}</div>
+        <div class="val">${v} V</div>
+        <div class="sub">${it.mv} mV</div>
+      </div>`;
+  });
+}
+
+function renderCAN(arr) {
+  const el = document.getElementById('can_tbody');
+  el.innerHTML = '';
+  arr.forEach((it, i) => {
+    const onPill  = it.enabled ? '<span class="pill pill-on">on</span>' : '<span class="pill pill-off">off</span>';
+    const opLabel = it.silent ? 'Silent' : 'Normal';
+
+    const lec  = LEC_NAMES[it.lec  ?? 7] || '?';
+    const dlec = LEC_NAMES[it.dlec ?? 7] || '?';
+    const rec  = it.rec ?? 0;
+
+    // CRC(6)/Stuff(1)/Form(2) — ошибки синхронизации
+    const isErr = c => (c === 1 || c === 2 || c === 6);
+    const lecColor  = isErr(it.lec)  ? ' style="color:#f85149"' : '';
+    const dlecColor = isErr(it.dlec) ? ' style="color:#f85149;font-weight:600"' : '';
+    const recColor  = rec > 0 ? ' style="color:#d29922"' : '';
+
+    el.innerHTML += `
+      <tr>
+        <td>FDCAN${i+1}</td>
+        <td>${CAN_PINS[i]}</td>
+        <td>${onPill}</td>
+        <td>${it.mode}</td>
+        <td class="num">${it.bitrate} kbit/s</td>
+        <td>${opLabel}</td>
+        <td class="num">${fmtAge(it.rx_age_ms)}</td>
+        <td class="num">${it.rx_cnt}</td>
+        <td class="num">${it.tx_cnt}</td>
+        <td class="num">${it.err_cnt}</td>
+        <td class="num"${lecColor}>${lec}</td>
+        <td class="num"${dlecColor}>${dlec}</td>
+        <td class="num"${recColor}>${rec}</td>
+      </tr>`;
+  });
+}
+
+function renderLIN(arr) {
+  const el = document.getElementById('lin_tbody');
+  el.innerHTML = '';
+  arr.forEach((it, i) => {
+    const onPill = it.enabled ? '<span class="pill pill-on">on</span>' : '<span class="pill pill-off">off</span>';
+    el.innerHTML += `
+      <tr>
+        <td>LIN${i}</td>
+        <td>${LIN_PINS[i]}</td>
+        <td>${onPill}</td>
+        <td>${it.mode}</td>
+        <td class="num">${it.baud}</td>
+        <td class="num">${fmtAge(it.rx_age_ms)}</td>
+        <td class="num">${it.rx_cnt}</td>
+        <td class="num">${it.tx_cnt}</td>
+        <td class="num">${it.err_cnt}</td>
+      </tr>`;
+  });
+}
+
+async function refresh() {
+  try {
+    const r = await fetch('/data');
+    const j = await r.json();
+
+    // Connection status
+    const c = document.getElementById('conn');
+    if (j.connected) {
+      c.innerHTML = `<span class="ok">● connected</span> ${j.com_port} · frames: ${j.frames}`;
+    } else {
+      c.innerHTML = `<span class="bad">● disconnected</span>`;
+    }
+
+    if (!j.data || !j.data.uptime_ms) return;
+    const d = j.data;
+
+    document.getElementById('uptime').textContent = fmtUptime(d.uptime_ms);
+    document.getElementById('upt').textContent = fmtUptime(d.uptime_ms);
+    document.getElementById('mode').textContent = d.mode;
+    document.getElementById('slp').textContent = d.sleep_count;
+
+    const iwdgEl = document.getElementById('iwdg');
+    const iwdg = d.iwdg_resets || 0;
+    iwdgEl.textContent = iwdg;
+    iwdgEl.style.color = iwdg > 0 ? '#f85149' : '';
+
+    /* rdp: старая прошивка поле не отдаёт — оставляем прочерк */
+    const rdpEl = document.getElementById('rdp');
+    if (d.rdp === undefined)  rdpEl.textContent = '—';
+    else if (d.rdp === 0)     rdpEl.innerHTML = '<span class="rdp-warn">OFF (RDP 0)</span>';
+    else if (d.rdp === 1)     rdpEl.innerHTML = '<span class="rdp-ok">ON (RDP 1)</span>';
+    else                      rdpEl.innerHTML = '<span class="rdp-bad">RDP 2 — permanent</span>';
+
+    renderInputs(d.in);
+    renderOutputs(d.out);
+    renderDac(d.dac);
+    renderCAN(d.can);
+    renderLIN(d.lin);
+  } catch (e) {
+    document.getElementById('conn').innerHTML = '<span class="bad">● bridge offline</span>';
+  }
+}
+
+/* ---- защита прошивки (RDP) ---- */
+function setSecStatus(t) { document.getElementById('sec_status').textContent = t; }
+
+async function secCmd(cmd) {
+  const key = document.getElementById('sec_key').value;
+  if (!key) { setSecStatus('введите ключ'); return; }
+  const isUnlock = (cmd === 'sec_unlock');
+  /* На unlock спрашиваем дважды: содержимое флеша не вернуть. */
+  const msg = isUnlock
+    ? 'ПАМЯТЬ БУДЕТ СТЁРТА. Вы уверены?\n\n'
+      + 'Снятие защиты стирает весь флеш: прошивку и конфиг.\n'
+      + 'Устройство перезагрузится пустым — прошивать заново через ST-Link или DFU.'
+    : 'ВКЛЮЧИТЬ ЗАЩИТУ. Вы уверены?\n\n'
+      + 'Чтение прошивки будет заблокировано, отладчик перестанет видеть флеш.\n'
+      + 'Снять можно только со стиранием памяти (Unlock или SWD).\n\n'
+      + 'Убедитесь, что ключ вам известен.';
+  if (!confirm(msg)) return;
+  if (isUnlock && !confirm('Память будет стёрта безвозвратно. Точно продолжить?')) return;
+  setSecStatus('отправка…');
+  try {
+    const r = await fetch('/cmd', { method: 'POST', body: JSON.stringify({ cmd: cmd, key: key }) });
+    const j = await r.json();
+    setSecStatus(j.ok ? 'отправлено — смотрите Protection после перезагрузки'
+                      : 'не отправлено: контроллер не подключён');
+  } catch (e) {
+    setSecStatus('ошибка: ' + e);
+  }
+  document.getElementById('sec_key').value = '';
+}
+function secLock()   { secCmd('sec_lock'); }
+function secUnlock() { secCmd('sec_unlock'); }
+
+/* ===================================================================
+ *  Конфигурация. Прошивка отдаёт плоский JSON: ключ = путь для set
+ *  ("in.0.mode", "stop.wake.can0"...). Каждое поле редактора несёт свой
+ *  путь в data-path, так что разбор/сборка — общие для всех полей.
+ * =================================================================== */
+const BR_NOM  = [1000, 500, 250, 125, 100, 50, 33, 20];
+const BR_DATA = [1000, 2000, 4000, 5000, 8000];
+const STOP_SRC = [
+  ['can0', 'CAN0', 'RX PD0 · EXTI0'], ['can1', 'CAN1', 'RX PB5'], ['can2', 'CAN2', 'RX PD12'],
+  ['lin0', 'LIN0', 'RX PD6 · EXTI6'], ['lin1', 'LIN1', 'RX PD9'],
+  ...IN_PINS.map((pin, i) => ['in' + i, 'in' + i, pin + ([0, 6].includes(i) ? ' · EXTI0' : [1, 7].includes(i) ? ' · EXTI1' : i === 4 ? ' · EXTI6' : '')]),
+];
+const CFG_SRC_TEXT = {
+  flash: 'конфиг из Flash',
+  defaults: 'во Flash пусто — дефолты прошивки',
+  defaults_changed: 'дефолты в прошивке изменились — сохранённый конфиг отброшен',
+};
+let cfgBase = {};
+
+function setCfgStatus(t, cls) {
+  const el = document.getElementById('cfgStatus');
+  el.textContent = t; el.className = cls || '';
+}
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+async function sendCmd(obj) {
+  const r = await fetch('/cmd', { method: 'POST', body: JSON.stringify(obj) });
+  return r.json();
+}
+async function getCfgState() { return (await fetch('/cfg')).json(); }
+
+/* Поля ввода: num / bool / sel. Значения ставит fillEditor(). */
+function num(path, w)  { return `<input type="number" data-path="${path}"${w ? ` style="width:${w}px"` : ''}>`; }
+function bool(path)    { return `<input type="checkbox" data-path="${path}">`; }
+function sel(path, opts) {
+  return `<select data-path="${path}">` + opts.map(o => `<option value="${o[0]}">${o[1]}</option>`).join('') + '</select>';
+}
+function row(label, html) { return `<span class="cfgrow"><label>${label}</label>${html}</span>`; }
+const OPTS = v => v.map(x => [x, x]);
+
+function buildEditor() {
+  let h = '';
+
+  h += '<div class="cfgsub">Входы</div>';
+  h += row('делитель (R1+R2)/R2', num('divider', 90));
+  h += '<table class="cfgtab"><tr><th>#</th><th>пин</th><th>режим</th><th>инв.</th><th>фильтр</th><th>порог мВ</th><th>гист. мВ</th><th>шум мВ</th></tr>';
+  for (let i = 0; i < 8; i++)
+    h += `<tr><td>in${i}</td><td class="num">${IN_PINS[i]}</td>
+      <td>${sel(`in.${i}.mode`, [[0, 'off'], [1, 'analog'], [2, 'digital']])}</td><td>${bool(`in.${i}.invert`)}</td>
+      <td>${num(`in.${i}.filter_samples`, 50)}</td><td>${num(`in.${i}.threshold_mv`)}</td>
+      <td>${num(`in.${i}.hysteresis_mv`)}</td><td>${num(`in.${i}.noise_mv`)}</td></tr>`;
+  h += '</table>';
+
+  h += '<div class="cfgsub">Выходы</div>';
+  h += '<div class="cfgnote">Частота ШИМ общая на таймер: OUT0-3 (TIM1), OUT4-7 (TIM3), OUT8-9 (TIM4), OUT10-11 (TIM12). 0 = как в CubeMX. Логика выходов — в outN.h.</div>';
+  h += '<table class="cfgtab"><tr><th>#</th>' + [...Array(12).keys()].map(i => `<th>${i}</th>`).join('') + '</tr>';
+  h += '<tr><td>инверсия</td>' + [...Array(12).keys()].map(i => `<td>${bool(`out.${i}.invert`)}</td>`).join('') + '</tr>';
+  h += '<tr><td>ШИМ, Гц</td>' + [...Array(12).keys()].map(i => [0, 4, 8, 10].includes(i)
+        ? `<td colspan="${i < 8 ? 4 : 2}">${num(`out.${i}.pwm_freq_hz`, 90)}</td>` : '').join('') + '</tr>';
+  h += '</table>';
+
+  h += '<div class="cfgsub">DAC</div>';
+  h += '<div class="cfgnote">мВ = источник × num / den + offset, затем в пределы min..max. Индекс: номер входа (0-7), выхода (0-11) или custom-слота (0-3).</div>';
+  h += '<table class="cfgtab"><tr><th>#</th><th>вкл</th><th>источник</th><th>индекс</th><th>num</th><th>den</th><th>offset</th><th>min</th><th>max</th><th>default</th></tr>';
+  for (let i = 0; i < 2; i++)
+    h += `<tr><td>DAC${i} ${i ? 'PA5' : 'PA4'}</td><td>${bool(`dac.${i}.enabled`)}</td>
+      <td>${sel(`dac.${i}.source`, [[0, 'fixed'], [1, 'вход'], [2, 'выход (fill)'], [3, 'custom']])}</td>
+      <td>${num(`dac.${i}.source_idx`, 50)}</td><td>${num(`dac.${i}.scale_num`, 60)}</td><td>${num(`dac.${i}.scale_den`, 60)}</td>
+      <td>${num(`dac.${i}.offset_mv`, 60)}</td><td>${num(`dac.${i}.min_mv`, 60)}</td><td>${num(`dac.${i}.max_mv`, 60)}</td>
+      <td>${num(`dac.${i}.default_mv`, 60)}</td></tr>`;
+  h += '</table>';
+
+  h += '<div class="cfgsub">CAN</div>';
+  h += '<div class="cfgnote">Параметры шины. Таблицы сигналов — в canN_config.h. Канал под сниффером применит новые параметры, когда сниффер выключат.</div>';
+  h += '<table class="cfgtab"><tr><th>#</th><th>вкл</th><th>скорость</th><th>FD</th><th>data</th><th>BRS</th><th>non-ISO</th><th>silent</th><th>auto-retx</th></tr>';
+  for (let i = 0; i < 3; i++)
+    h += `<tr><td>CAN${i} ${CAN_PINS[i]}</td><td>${bool(`can.${i}.enabled`)}</td>
+      <td>${sel(`can.${i}.bitrate_nominal`, OPTS(BR_NOM))}</td><td>${bool(`can.${i}.fd_mode`)}</td>
+      <td>${sel(`can.${i}.bitrate_data`, OPTS(BR_DATA))}</td><td>${bool(`can.${i}.brs`)}</td>
+      <td>${bool(`can.${i}.non_iso`)}</td><td>${bool(`can.${i}.op_silent`)}</td><td>${bool(`can.${i}.auto_retx`)}</td></tr>`;
+  h += '</table>';
+
+  h += '<div class="cfgsub">LIN</div>';
+  h += '<div class="cfgnote">Параметры канала. Кадры и сигналы — в linN_config.h.</div>';
+  h += '<table class="cfgtab"><tr><th>#</th><th>вкл</th><th>режим</th><th>протокол</th><th>бод</th></tr>';
+  for (let i = 0; i < 2; i++)
+    h += `<tr><td>LIN${i} ${LIN_PINS[i]}</td><td>${bool(`lin.${i}.enabled`)}</td>
+      <td>${sel(`lin.${i}.mode`, [[0, 'Monitor'], [1, 'Slave'], [2, 'Master']])}</td>
+      <td>${sel(`lin.${i}.protocol`, [[0, 'LIN 1.x'], [1, 'LIN 2.x']])}</td><td>${num(`lin.${i}.baudrate`)}</td></tr>`;
+  h += '</table>';
+
+  h += '<div class="cfgsub">Сон (STOP)</div>';
+  h += row('сон разрешён', bool('stop.enabled')) + row('только при выключенных выходах', bool('stop.require_outputs_off'))
+     + row('не спать первые, мс', num('stop.min_awake_ms'));
+  h += '<br>' + row('CAN молчит, мс', num('stop.can_idle_ms')) + row('LIN молчит, мс', num('stop.lin_idle_ms'))
+     + row('вход не меняется, мс', num('stop.inputs_idle_ms'));
+  h += '<div class="cfgnote">«Должен молчать» — контроллер уснёт, только когда ВСЕ отмеченные источники молчат своё время (вход: digital — нет смены состояния, analog — не уходит больше чем на 300 мВ). '
+     + '«Будит» — фронт на пине будит контроллер. Будить может только digital-вход; из источников на одной линии EXTI (can0/in0/in6, in1/in7, lin0/in4) — только один.</div>';
+  h += '<table class="cfgtab" style="width:auto"><tr><th>источник</th><th>пин</th><th>должен молчать</th><th>будит</th></tr>';
+  for (const [k, name, pin] of STOP_SRC)
+    h += `<tr><td>${name}</td><td class="num">${pin}</td><td style="text-align:center">${bool(`stop.sleep.${k}`)}</td>
+      <td style="text-align:center">${bool(`stop.wake.${k}`)}</td></tr>`;
+  h += '</table>';
+
+  h += '<div class="cfgsub">Диагностика</div>';
+  h += row('JSON в USB', bool('diag.enabled')) + row('период, мс', num('diag.period_ms'))
+     + row('текстовый лог', bool('diag.keep_text_log'));
+
+  const ed = document.getElementById('cfgEditor');
+  ed.innerHTML = h;
+  ed.querySelectorAll('[data-path]').forEach(el => el.addEventListener('input', () => markChanged(el)));
+}
+
+function valueOf(el) { return el.type === 'checkbox' ? (el.checked ? 1 : 0) : Number(el.value); }
+function markChanged(el) { el.classList.toggle('chg', valueOf(el) !== cfgBase[el.dataset.path]); }
+
+function fillEditor(cfg) {
+  if (!document.querySelector('#cfgEditor [data-path]')) buildEditor();
+  cfgBase = {};
+  document.querySelectorAll('#cfgEditor [data-path]').forEach(el => {
+    const p = el.dataset.path, v = cfg[p];
+    el.disabled = (v === undefined);           /* прошивка не знает поля */
+    if (v === undefined) return;
+    if (el.type === 'checkbox') el.checked = !!v; else el.value = v;
+    cfgBase[p] = valueOf(el);
+    el.classList.remove('chg');
+  });
+  return CFG_SRC_TEXT[cfg.src] || '';
+}
+
+async function waitResp(before, ms) {
+  for (let t = 0; t < (ms || 2000); t += 40) {
+    const st = await getCfgState();
+    if (st.resp_seq !== before) return st.resp;
+    await sleep(40);
+  }
+  return null;
+}
+
+/* Команда + ожидание её ответа {"resp":...}. */
+async function cmdResp(obj, ms) {
+  const before = (await getCfgState()).resp_seq;
+  const r = await sendCmd(obj);
+  if (!r.ok) return { resp: 'err', msg: 'контроллер не подключён' };
+  return (await waitResp(before, ms)) || { resp: 'err', msg: 'нет ответа' };
+}
+
+async function loadConfig(note) {
+  setCfgStatus('загрузка…');
+  let before = 0;
+  try { before = (await getCfgState()).cfg_seq; } catch (e) {}
+  const r = await sendCmd({ cmd: 'get' });
+  if (!r.ok) { setCfgStatus('контроллер не подключён', 'err'); return false; }
+  for (let i = 0; i < 30; i++) {
+    await sleep(100);
+    const st = await getCfgState();
+    if (st.cfg && st.cfg_seq !== before) {
+      const src = fillEditor(st.cfg);
+      setCfgStatus((note ? note + ' · ' : 'загружено · ') + src, note && note.startsWith('ошибка') ? 'err' : 'ok');
+      return true;
+    }
+  }
+  setCfgStatus('таймаут: контроллер не ответил на get', 'err');
+  return false;
+}
+
+async function applyConfig() {
+  const changes = [];
+  document.querySelectorAll('#cfgEditor [data-path]').forEach(el => {
+    if (el.disabled) return;
+    const v = valueOf(el);
+    if (!Number.isFinite(v)) return;
+    if (v !== cfgBase[el.dataset.path]) changes.push([el.dataset.path, v]);
+  });
+  if (!changes.length) { setCfgStatus('нет изменений'); return; }
+
+  /* По одному set с ожиданием ответа: ошибку поля видно сразу, и
+   * при первой же ошибке pending откатывается — полконфига не применится. */
+  for (let i = 0; i < changes.length; i++) {
+    const [path, val] = changes[i];
+    setCfgStatus(`set ${i + 1}/${changes.length}: ${path}`);
+    const r = await cmdResp({ cmd: 'set', path, val });
+    if (r.resp !== 'ok') {
+      await cmdResp({ cmd: 'discard' });
+      setCfgStatus(`ошибка set ${path}: ${r.msg || JSON.stringify(r)} — ничего не применено`, 'err');
+      return;
+    }
+  }
+  setCfgStatus('apply…');
+  const r = await cmdResp({ cmd: 'apply' }, 5000);      /* стирание сектора Flash — до ~2 с */
+  if (r.resp !== 'ok') {
+    await cmdResp({ cmd: 'discard' });
+    await loadConfig('ошибка apply: ' + (r.msg || JSON.stringify(r)) + ' — ничего не применено');
+    return;
+  }
+  await loadConfig(`применено и сохранено: ${changes.length} изм.`);
+}
+
+async function discardConfig() {
+  await cmdResp({ cmd: 'discard' });
+  await loadConfig('правки отброшены');
+}
+
+async function loadDefaults() {
+  if (!confirm('Сбросить ВСЕ настройки на дефолты прошивки (из *_config.h) и сохранить?')) return;
+  setCfgStatus('дефолты…');
+  await cmdResp({ cmd: 'defaults' });
+  const r = await cmdResp({ cmd: 'apply' }, 5000);
+  if (r.resp !== 'ok') await cmdResp({ cmd: 'discard' });
+  await loadConfig(r.resp === 'ok' ? 'дефолты применены и сохранены'
+                                   : 'ошибка apply: ' + (r.msg || JSON.stringify(r)) + ' — ничего не применено');
+}
+
+setInterval(refresh, 500);
+refresh();
+</script>
+
+</body>
+</html>

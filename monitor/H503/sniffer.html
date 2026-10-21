@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>UniversalController — CAN сниффер</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 16px; background: #0e1116; color: #e6edf3;
+         font-family: -apple-system, "Segoe UI", system-ui, sans-serif; font-size: 13px; }
+  h1 { font-size: 18px; margin: 0; }
+  a { color: #58a6ff; text-decoration: none; }
+  .header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+            margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #30363d; flex-wrap: wrap; }
+  .conn { font-size: 11px; opacity: 0.8; }
+  .ok { color: #3fb950; } .bad { color: #f85149; } .warn { color: #d29922; } .dim { color: #8b949e; }
+  .card { background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 10px 12px; margin-bottom: 12px; }
+  .card h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; margin: 0 0 8px 0; color: #8b949e; font-weight: 600; }
+  .chans { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  @media (max-width: 900px) { .chans { grid-template-columns: 1fr; } }
+  .chan { background: #0d1117; border: 1px solid #21262d; border-radius: 4px; padding: 8px; }
+  .chan.on { border-color: #238636; }
+  .chan .top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .chan .name { font-weight: 600; font-size: 14px; }
+  .chan .row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-top: 4px; }
+  .chan .info { font-size: 11px; color: #8b949e; margin-top: 6px; min-height: 28px; }
+  select, input[type=text], button { background: #0d1117; color: #e6edf3; border: 1px solid #30363d; border-radius: 4px;
+           padding: 4px 8px; font-size: 12px; font-family: inherit; }
+  button { cursor: pointer; }
+  button:hover { border-color: #58a6ff; }
+  button.go { background: #238636; border-color: #2ea043; }
+  button.stop { background: #8e1519; border-color: #da3633; }
+  button.act { background: #1f6feb; border-color: #388bfd; }
+  .bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .bar .sp { flex: 1; }
+  .stat { font-size: 12px; color: #8b949e; }
+  .stat b { color: #e6edf3; font-weight: 600; }
+  table { width: 100%; border-collapse: collapse; font-family: Consolas, "Cascadia Mono", monospace; font-size: 12px; }
+  th { text-align: left; color: #8b949e; font-weight: 600; font-size: 11px; padding: 4px 8px; border-bottom: 1px solid #30363d;
+       position: sticky; top: 0; background: #161b22; cursor: pointer; user-select: none; white-space: nowrap; }
+  td { padding: 2px 8px; border-bottom: 1px solid #21262d; white-space: nowrap; vertical-align: top; }
+  td.data { white-space: normal; word-spacing: 2px; }
+  tr.stale td { color: #6e7681; }
+  .c0 { color: #58a6ff; } .c1 { color: #d2a8ff; } .c2 { color: #ffa657; }
+  .b0 { background: #9e6a03; color: #fff; border-radius: 2px; }
+  .b1 { background: #5a4a12; border-radius: 2px; }
+  .b2 { color: #e3b341; }
+  .tag { font-size: 10px; padding: 0 4px; border-radius: 3px; border: 1px solid #30363d; color: #8b949e; margin-left: 3px; }
+  .tag.fd { color: #3fb950; border-color: #238636; }
+  .wrap { max-height: calc(100vh - 330px); min-height: 200px; overflow: auto; }
+  .num { text-align: right; }
+  .hint { font-size: 11px; color: #8b949e; margin-top: 6px; }
+  input[type=number] { background: #0d1117; color: #e6edf3; border: 1px solid #30363d; border-radius: 4px;
+           padding: 4px 8px; font-size: 12px; font-family: inherit; width: 130px; }
+  input.mono { font-family: Consolas, "Cascadia Mono", monospace; }
+  /* ── Передача (TX) ─────────────────────────────────────────────── */
+  h2.toggle { cursor: pointer; user-select: none; }
+  .txbanner { display: none; background: #3d1418; border: 1px solid #da3633; color: #ffcecb;
+              border-radius: 6px; padding: 8px 12px; margin-bottom: 12px; font-weight: 600; }
+  .txbanner .dot { color: #ff7b72; }
+  .txwarn { background: #3a2c0e; border: 1px solid #9e6a03; color: #f0d98a; border-radius: 4px;
+            padding: 6px 10px; margin-bottom: 10px; font-size: 12px; }
+  .txgrid { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 6px; }
+  .fld { display: flex; flex-direction: column; gap: 3px; }
+  .fld > label { font-size: 11px; color: #8b949e; }
+  .fld.chk { flex-direction: row; align-items: center; gap: 4px; padding-bottom: 5px; }
+  .fld.chk label { font-size: 12px; }
+  .txrow { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; margin-top: 8px; }
+  .err { color: #f85149; font-size: 12px; }
+  .msgok { color: #3fb950; font-size: 12px; }
+  #txSlots td { white-space: normal; }
+  #txSlots tr { cursor: pointer; }
+  #txSlots tr:hover td { background: #1c2230; }
+  #tbody tr { cursor: pointer; }
+  #tbody tr:hover td { background: #1c2230; }
+  /* ── Разбор кадра на биты (двойной клик по строке) ───────────────── */
+  .modal { position: fixed; inset: 0; background: rgba(1,4,9,.72); display: none;
+           align-items: flex-start; justify-content: center; z-index: 60; padding: 40px 16px; overflow: auto; }
+  .modalbox { background: #161b22; border: 1px solid #30363d; border-radius: 8px;
+              width: min(720px, 96vw); max-height: calc(100vh - 80px); display: flex; flex-direction: column;
+              box-shadow: 0 12px 48px rgba(0,0,0,.6); }
+  .modalhead { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex: 0 0 auto;
+               padding: 10px 14px; border-bottom: 1px solid #30363d; }
+  .modalhead .ttl { font-weight: 600; font-size: 14px; font-family: Consolas, "Cascadia Mono", monospace; }
+  button.x { background: transparent; border: none; color: #8b949e; font-size: 18px; line-height: 1; padding: 2px 6px; }
+  button.x:hover { color: #f85149; border: none; }
+  .modalbody { padding: 10px 14px 14px; overflow: auto; flex: 1 1 auto; }
+  table.bittbl { width: 100%; border-collapse: collapse; font-family: Consolas, "Cascadia Mono", monospace; font-size: 12px; }
+  table.bittbl th { text-align: center; color: #8b949e; font-weight: 600; font-size: 11px; padding: 4px 5px; border-bottom: 1px solid #30363d;
+                    position: sticky; top: -10px; background: #161b22; z-index: 1; }
+  table.bittbl th .w { color: #6e7681; font-weight: 400; font-size: 10px; }
+  table.bittbl td { text-align: center; padding: 3px 5px; border-bottom: 1px solid #21262d; }
+  table.bittbl td.bidx { color: #8b949e; }
+  table.bittbl td.hexv { font-weight: 600; color: #e6edf3; }
+  table.bittbl td.decv { color: #8b949e; }
+  table.bittbl td.bcell { padding: 2px 3px; cursor: pointer; }
+  .bit { display: inline-block; width: 22px; height: 18px; line-height: 18px; border: 1px solid #30363d;
+         border-radius: 3px; color: transparent; user-select: none; }
+  .bit.on { background: #1f6feb; border-color: #388bfd; color: #fff; }
+  td.bcell:hover .bit { border-color: #58a6ff; }
+  @keyframes bflash { 0% { background: #9e6a03; border-color: #d29922; } 100% {} }
+  .bit.chg, td.hexv.chg { animation: bflash .7s ease-out; }
+  .bithint { font-size: 11px; color: #8b949e; margin-top: 10px; min-height: 15px; }
+  .bithint b { color: #e6edf3; font-family: Consolas, "Cascadia Mono", monospace; }
+</style>
+</head>
+<body>
+<div class="header">
+  <div><h1>CAN / CAN FD сниффер</h1><span class="dim" id="board"></span></div>
+  <div class="conn"><span id="conn" class="bad">нет связи</span> · <a href="/">← дашборд</a></div>
+</div>
+
+<div class="txbanner" id="txBanner"></div>
+
+<div class="card">
+  <h2>Каналы</h2>
+  <div class="chans" id="chans"></div>
+  <div class="hint">Сниффер всегда слушает шину в режиме Bus Monitoring: без подтверждения кадров и без передачи
+    (кадры TX конфига на канале, пока он слушается, не уходят). «Как в конфиге» — скорость и FD из конфига. Пока сниффер включён, контроллер не засыпает.</div>
+</div>
+
+<div class="card" id="txCard">
+  <h2 class="toggle" id="txToggle">&#9656; Передача <span class="dim">(запись в шину)</span></h2>
+  <div id="txBody" style="display:none">
+    <div class="txwarn">Передача пишет в шину машины — включайте только понимая, что делаете.</div>
+    <div class="txgrid">
+      <div class="fld"><label for="txCh">Канал</label><select id="txCh"></select></div>
+      <div class="fld"><label for="txId">ID (hex)</label><input type="text" id="txId" class="mono" size="10" placeholder="напр. 384"></div>
+      <div class="fld chk"><input type="checkbox" id="txExt"><label for="txExt">29-бит</label></div>
+      <div class="fld chk"><input type="checkbox" id="txFd"><label for="txFd">FD</label></div>
+      <div class="fld chk"><input type="checkbox" id="txBrs"><label for="txBrs">BRS</label></div>
+      <div class="fld" style="flex:1; min-width:220px"><label for="txData">Данные (hex-байты, пробелы можно)</label><input type="text" id="txData" class="mono" placeholder="напр. 01 02 03 04" style="width:100%"></div>
+      <div class="fld"><label>DLC</label><span class="stat" id="txDlc"><b>0</b></span></div>
+    </div>
+    <div class="err" id="txErr" style="min-height:16px"></div>
+    <div id="txMsg" style="min-height:16px"></div>
+
+    <div id="txInactive" style="display:none">
+      <div class="txwarn" id="txInactiveMsg"></div>
+      <div class="txrow" id="txActRow"><button id="txActivate" class="act"></button></div>
+      <div class="txrow" id="txConfirm" style="display:none">
+        <span id="txConfirmMsg" class="warn"></span>
+        <button id="txConfirmYes" class="stop"></button>
+        <button id="txConfirmNo">Отмена</button>
+      </div>
+    </div>
+
+    <div id="txActive" style="display:none">
+      <div class="txrow"><button id="txOnce" class="go">Отправить один раз</button></div>
+      <div class="txrow">
+        <div class="fld"><label for="txPeriod">Период, мс</label><input type="number" id="txPeriod" min="5" step="5" value="100"></div>
+        <div class="fld"><label for="txCount">Повторов (0 = без предела)</label><input type="number" id="txCount" min="0" step="1" value="0"></div>
+        <button id="txPeriodic" class="act">Слать периодически</button>
+      </div>
+    </div>
+
+    <div id="txSlotsWrap" style="display:none; margin-top:12px">
+      <h2>Периодические передачи</h2>
+      <table id="txTbl"><thead><tr><th></th><th>Канал</th><th>ID</th><th>Данные</th><th class="num">Период, мс</th><th class="num">Повт.</th><th class="num">Отправлено</th><th></th><th></th></tr></thead><tbody id="txSlots"></tbody></table>
+      <div class="txrow"><button id="txStopAll" class="stop">Стоп всё</button><button id="txClearList">Очистить остановленные</button></div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="bar">
+    <button id="bView" class="act">По ID</button>
+    <button id="bTrace">Лента</button>
+    <input type="text" id="flt" placeholder="фильтр: 3E8, 18DA*, ch1 …" size="26" title="Части ID через пробел или запятую; * в конце — префикс; ch0/ch1/ch2 — канал; !3E8 — исключить">
+    <button id="bPause">Пауза</button>
+    <button id="bClear">Очистить</button>
+    <button id="bLog">Запись в файл</button>
+    <span class="sp"></span>
+    <span class="stat" id="stats"></span>
+  </div>
+  <div class="hint" id="logInfo"></div>
+</div>
+
+<div class="card">
+  <div class="wrap"><table id="tbl"><thead id="thead"></thead><tbody id="tbody"></tbody></table></div>
+  <div class="hint">Двойной клик по строке — разбор кадра на биты (как в CAN-Hacker), обновляется вживую.</div>
+</div>
+
+<div class="modal" id="bitModal">
+  <div class="modalbox">
+    <div class="modalhead">
+      <span class="ttl" id="bitTitle"></span>
+      <button class="x" id="bitClose" title="Закрыть (Esc)">&#10005;</button>
+    </div>
+    <div class="modalbody">
+      <table class="bittbl" id="bitTbl"></table>
+      <div class="bithint" id="bitHint"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+let view = 'ids', paused = false, sortKey = 'id', sortDir = 1, traceSeq = 0, trace = [], logOn = false;
+let devSniff = [0, 0, 0], canInfo = [], nch = 0;
+const $ = id => document.getElementById(id);
+
+/* Каналы и скорости приходят от монитора (у H503 одна шина, свои скорости FD). */
+function buildChans(n, BR, DBR) {
+  nch = n;
+  $('chans').style.gridTemplateColumns = n === 1 ? 'minmax(0, 420px)' : '';
+  let h = '';
+  for (let c = 0; c < n; c++) {
+    h += `<div class="chan" id="chan${c}"><div class="top"><span class="name c${c}">CAN${c}</span>
+      <button id="tog${c}" onclick="toggle(${c})">Включить</button></div>
+      <div class="row"><select id="br${c}"><option value="0">скорость как в конфиге</option>${BR.map(b => `<option value="${b}">${b} кбит/с</option>`).join('')}</select></div>
+      <div class="row"><select id="fd${c}"><option value="-1">FD как в конфиге</option><option value="0">только классический CAN</option><option value="1">CAN FD</option></select>
+        <select id="dbr${c}"><option value="0">данные как в конфиге</option>${DBR.map(b => `<option value="${b}">${b} кбит/с</option>`).join('')}</select></div>
+      <div class="info" id="inf${c}"></div></div>`;
+  }
+  $('chans').innerHTML = h;
+  buildTxCh(n);
+}
+
+async function cmd(o) {
+  try { const r = await fetch('/cmd', { method: 'POST', body: JSON.stringify(o) }); return (await r.json()).ok; } catch (e) { return false; }
+}
+
+async function toggle(c) {
+  const on = devSniff[c] ? 0 : 1;
+  const o = { cmd: 'sniff', ch: c, on: on };
+  if (on) {
+    const br = +$('br' + c).value, fd = +$('fd' + c).value, dbr = +$('dbr' + c).value;
+    if (br) o.br = br; if (fd >= 0) o.fd = fd; if (dbr) o.dbr = dbr;
+  }
+  $('tog' + c).disabled = true;
+  await cmd(o);
+  setTimeout(() => { $('tog' + c).disabled = false; }, 600);
+}
+
+function parseFilter() {
+  const inc = [], exc = []; let chs = null;
+  for (let t of $('flt').value.toUpperCase().split(/[\s,;]+/).filter(Boolean)) {
+    const m = /^CH([0-2])$/.exec(t);
+    if (m) { (chs = chs || new Set()).add(+m[1]); continue; }
+    let neg = false; if (t[0] === '!') { neg = true; t = t.slice(1); }
+    t = t.replace(/^0X/, ''); if (!t) continue;
+    (neg ? exc : inc).push(t);
+  }
+  const match = (id, t) => t.endsWith('*') ? id.startsWith(t.slice(0, -1)) : id === t.replace(/^0+(?=.)/, '');
+  return (ch, id) => (!chs || chs.has(ch)) && (!inc.length || inc.some(t => match(id, t))) && !exc.some(t => match(id, t));
+}
+
+function tags(fl) {
+  let s = '';
+  if (fl.includes('x')) s += '<span class="tag">29</span>';
+  if (fl.includes('f')) s += '<span class="tag fd">FD' + (fl.includes('b') ? '·BRS' : '') + '</span>';
+  if (fl.includes('e')) s += '<span class="tag">ESI</span>';
+  if (fl.includes('r')) s += '<span class="tag">RTR</span>';
+  return s;
+}
+
+function bytesHtml(data, chg) {
+  if (!data) return '<span class="dim">—</span>';
+  let s = '';
+  for (let i = 0; i < data.length; i += 2) {
+    const a = chg ? chg[i >> 1] : '3';
+    const b = data.substr(i, 2);
+    s += (a === '3' ? b : `<span class="b${a}">${b}</span>`) + ' ';
+  }
+  return s;
+}
+
+function head(cols) {
+  $('thead').innerHTML = '<tr>' + cols.map(c => `<th class="${c.num ? 'num' : ''}" ${c.key ? `onclick="setSort('${c.key}')"` : ''}>${c.t}${c.key === sortKey && view === 'ids' ? (sortDir > 0 ? ' ▲' : ' ▼') : ''}</th>`).join('') + '</tr>';
+}
+function setSort(k) { if (sortKey === k) sortDir = -sortDir; else { sortKey = k; sortDir = 1; } }
+
+function renderIds(d) {
+  head([{ t: 'Канал', key: 'ch' }, { t: 'ID', key: 'id' }, { t: 'Длина', key: 'len', num: 1 }, { t: 'Данные' },
+        { t: 'Период, мс', key: 'per', num: 1 }, { t: 'Кадров', key: 'n', num: 1 }, { t: 'Возраст', key: 'age', num: 1 }]);
+  const f = parseFilter();
+  const rows = d.ids.filter(r => f(r.ch, r.id));
+  const key = sortKey;
+  rows.sort((a, b) => {
+    let x, y;
+    if (key === 'id') { x = a.ch * 1e10 + parseInt(a.id, 16); y = b.ch * 1e10 + parseInt(b.id, 16); if (sortDir < 0) { x = parseInt(a.id, 16); y = parseInt(b.id, 16); } }
+    else { x = a[key]; y = b[key]; }
+    return (x < y ? -1 : x > y ? 1 : 0) * sortDir;
+  });
+  $('tbody').innerHTML = rows.map(r => `<tr class="${r.age > 3000 ? 'stale' : ''}" data-ch="${r.ch}" data-id="${r.id}" data-data="${r.data}" data-fl="${r.fl}"><td class="c${r.ch}">CAN${r.ch}</td><td>${r.id}${tags(r.fl)}</td>
+    <td class="num">${r.len}</td><td class="data">${bytesHtml(r.data, r.chg)}</td>
+    <td class="num">${r.per > 0 ? r.per.toFixed(r.per < 100 ? 1 : 0) : ''}</td><td class="num">${r.n}</td>
+    <td class="num">${r.age < 1000 ? '' : (r.age / 1000).toFixed(0) + ' с'}</td></tr>`).join('');
+  return rows.length;
+}
+
+function renderTrace() {
+  head([{ t: 'Время, с', num: 1 }, { t: 'Δ, мс', num: 1 }, { t: 'Канал' }, { t: 'ID' }, { t: 'Длина', num: 1 }, { t: 'Данные' }]);
+  const f = parseFilter();
+  const rows = trace.filter(r => f(r[2], r[4])).slice(-400);
+  let prev = null, h = '';
+  for (const r of rows) {
+    const dt = prev === null ? '' : (r[1] - prev).toFixed(2); prev = r[1];
+    h += `<tr data-ch="${r[2]}" data-id="${r[4]}" data-data="${r[5]}" data-fl="${r[3]}"><td class="num">${(r[1] / 1000).toFixed(4)}</td><td class="num">${dt}</td><td class="c${r[2]}">CAN${r[2]}</td><td>${r[4]}${tags(r[3])}</td>
+      <td class="num">${r[3].includes('r') ? r[5].slice(1) : r[5].length / 2}</td><td class="data">${r[3].includes('r') ? '<span class="dim">remote</span>' : bytesHtml(r[5])}</td></tr>`;
+  }
+  $('tbody').innerHTML = h;
+  const w = document.querySelector('.wrap'); w.scrollTop = w.scrollHeight;
+  return rows.length;
+}
+
+async function tick() {
+  try {
+    const cs = await (await fetch('/can/ids')).json();
+    lastIds = cs.ids || [];                 /* для живого обновления окна «разбор на биты» */
+    if (!nch) buildChans(cs.channels || 3, cs.br || [1000, 500, 250, 125, 100, 50, 33, 20], cs.dbr || [1000, 2000, 4000, 5000, 8000]);
+    const st = await (await fetch('/data')).json();
+    const d = st.data || {};
+    const live = st.connected && st.age_ms >= 0 && st.age_ms < 2000;
+    $('conn').className = live ? 'ok' : 'bad';
+    $('conn').textContent = live ? 'связь есть · ' + st.com_port : (st.connected ? 'порт ' + st.com_port + ' открыт, кадров нет' : 'контроллер не подключён или спит');
+    const sn = d.sniff;
+    const ovf = !!d.diag_overflow;          /* короткий резервный кадр diag: полей sniff/can/tx в нём нет */
+    if (ovf) $('conn').textContent += ' · кадр диагностики переполнен, показано последнее состояние';
+    if (!ovf) canInfo = d.can || [];
+    if (!sn && !ovf) {
+      for (let c = 0; c < nch; c++) $('inf' + c).innerHTML = live ? '<span class="warn">прошивка без сниффера — обновите прошивку контроллера</span>' : '';
+      devSniff = [0, 0, 0];
+    } else if (sn) devSniff = live ? sn.on : [0, 0, 0];
+    else if (!live) devSniff = [0, 0, 0];   /* переполненный кадр + связь пропала */
+    for (let c = 0; c < nch; c++) {
+      const on = !!devSniff[c];
+      $('chan' + c).className = 'chan' + (on ? ' on' : '');
+      const b = $('tog' + c); b.textContent = on ? 'Выключить' : 'Включить'; b.className = on ? 'stop' : 'go';
+      for (const k of ['br', 'fd', 'dbr']) $(k + c).disabled = on;
+      if (sn) {
+        const ci = canInfo[c] || {};
+        const mode = (ci.mode || '?') + ' ' + (ci.bitrate || '?') + 'k' + (ci.dbitrate ? '/' + ci.dbitrate + 'k' : '');
+        const bad = v => v >= 1 && v <= 6;      /* 0 — ошибок нет, 7 — без изменений */
+        const errs = (on && (bad(ci.lec) || bad(ci.dlec)) && ci.rec > 0)
+          ? ` · <span class="warn">ошибки приёма (код ${ci.lec}/${ci.dlec}): проверьте скорость и режим FD</span>` : '';
+        $('inf' + c).innerHTML = (ci.enabled ? '' : 'в конфиге выключен · ') + mode + (ci.silent ? ' · только приём' : ' · Normal') + errs;
+      }
+    }
+    const txj = await fetchTx();          /* опрос передачи в общем цикле — без наложения запросов */
+    if (!ovf) lastTxj = txj;                  /* в переполненном кадре tx нет — берём последний */
+    updateTx(live, canInfo, ovf ? lastTxj : txj);
+    logOn = !!cs.log;
+    $('bLog').textContent = logOn ? 'Остановить запись' : 'Запись в файл'; $('bLog').className = logOn ? 'stop' : '';
+    $('logInfo').textContent = cs.log ? 'Пишу лог: ' + cs.log : (cs.last_log ? 'Последний лог: ' + cs.last_log : '');
+    $('board').textContent = ' · ' + (cs.board || '');
+    if (view === 'trace') {
+      const tr = await (await fetch('/can/trace?since=' + traceSeq + '&max=2000')).json();
+      if (!paused) { trace = trace.concat(tr.frames); if (trace.length > 5000) trace = trace.slice(-5000); }
+      traceSeq = tr.seq;
+    }
+    let shown = 0;
+    if (!paused) shown = view === 'ids' ? renderIds(cs) : renderTrace();
+    const drop = sn ? (sn.drop + sn.lost) : 0;
+    const fps = [0, 1, 2].slice(0, nch).map(c => `<b class="c${c}">${cs.fps[c]}</b>`).join(' · ');
+    $('stats').innerHTML = `кадров/с: ${fps} &nbsp; всего <b>${cs.total}</b> · ID <b>${cs.ids.length}</b>`
+      + (drop ? ` · <span class="bad">потеряно ${drop}</span>` : '') + (paused ? ' · <span class="warn">пауза</span>' : '');
+    if (bitView) refreshBits();             /* окно «разбор на биты» обновляется вживую */
+  } catch (e) {
+    $('conn').className = 'bad'; $('conn').textContent = 'монитор не отвечает';
+  }
+  setTimeout(tick, view === 'trace' ? 150 : 250);
+}
+
+$('bView').onclick = () => { view = 'ids'; $('bView').className = 'act'; $('bTrace').className = ''; };
+$('bTrace').onclick = () => { view = 'trace'; $('bTrace').className = 'act'; $('bView').className = ''; };
+$('bPause').onclick = () => { paused = !paused; $('bPause').className = paused ? 'act' : ''; $('bPause').textContent = paused ? 'Продолжить' : 'Пауза'; };
+$('bClear').onclick = async () => { trace = []; await fetch('/can/clear', { method: 'POST' }); };
+$('bLog').onclick = async () => { await fetch('/can/log', { method: 'POST', body: logOn ? '0' : '1' }); };
+
+/* ─────────────────────────── Передача (TX) ───────────────────────────
+   Панель по SPEC §11.5. По умолчанию канал слушает «молча»; передавать можно
+   только после перевода канала в активный режим (Normal) командой sniff tx:1. */
+let txStep = 0;             /* ступень подтверждения активации: 0 нет, 1 первая, 2 вторая */
+let txActiveArr = null;     /* active[] из GET /tx, либо null если монитор ещё без /tx */
+let txKnown = [];           /* постоянный список передач: помним ID даже после остановки — из списка не пропадает */
+let txKeySeq = 1;           /* счётчик ключей строк txKnown */
+let txStartBusy = new Set();/* ключи строк с «Пуск» в полёте (защита от повторного клика) */
+let txLive = false, txCan = [];
+let txSupported = true;     /* GET /tx вернул 404 (старый монитор без передачи) → false */
+let txSlotsSig = '';        /* подпись списка передач (без sent): перестраиваем таблицу только при изменении */
+let txSentCell = {};        /* key → ячейка «отправлено» (обновляем на месте, не пересоздавая строку) */
+let txOnceBusy = false, txPeriodicBusy = false;   /* запрос в полёте — не снимать disabled в тике (защита от повторной отправки) */
+
+function buildTxCh(n) {
+  let h = '';
+  for (let c = 0; c < n; c++) h += '<option value="' + c + '">CAN' + c + '</option>';
+  $('txCh').innerHTML = h;
+}
+
+let lastTxj = null;         /* последний ответ /tx из полного кадра diag */
+async function fetchTx() {
+  try {
+    const r = await fetch('/tx');
+    if (r.status === 404) { txSupported = false; return null; }   /* старый монитор без передачи */
+    if (!r.ok) return null;                 /* временная ошибка — не ломаемся, панель просто не активируем */
+    txSupported = true;
+    return await r.json();
+  } catch (e) { return null; }
+}
+
+/* Канал активен (может передавать), только если оба доступных источника это подтверждают:
+   /tx active[ch]==1 и /data can[ch].silent==0. Так безопаснее — кнопки отправки не разблокируем зря. */
+function chActive(c) {
+  if (!txLive || !txSupported) return false;
+  /* Активным считаем канал ТОЛЬКО когда это подтверждает /tx (active[ch]==1).
+     Без подтверждения (нет /tx, 404, временная ошибка → txActiveArr==null) кнопки не разблокируем —
+     иначе на старом мониторе без /tx панель ложно показывала бы передачу доступной. */
+  if (!txActiveArr || txActiveArr[c] === undefined) return false;
+  const byTx = (txActiveArr[c] === 1 || txActiveArr[c] === true);
+  const ci = txCan[c];
+  const bySilent = (ci && ci.silent !== undefined) ? (ci.silent === 0) : true;   /* доп. проверка, если есть */
+  return byTx && bySilent;
+}
+
+function updateTx(live, can, txj) {
+  txLive = live; txCan = can || [];
+  txActiveArr = (txj && Array.isArray(txj.active)) ? txj.active : null;
+  reconcileTx((txj && Array.isArray(txj.slots)) ? txj.slots : []);
+  const act = [];
+  for (let c = 0; c < nch; c++) if (chActive(c)) act.push(c);
+  const banner = $('txBanner');
+  if (act.length) {
+    banner.style.display = 'block';
+    banner.innerHTML = '<span class="dot">&#9679;</span> Идёт передача / активный режим CAN ' + act.join(', ');
+  } else banner.style.display = 'none';
+  renderTxPanel();
+}
+
+function renderTxPanel() {
+  const ch = +$('txCh').value || 0;
+  const active = chActive(ch);
+  if (active) {
+    $('txInactive').style.display = 'none';
+    $('txActive').style.display = '';
+    if (txStep !== 0) resetConfirm();
+  } else {
+    $('txActive').style.display = 'none';
+    $('txInactive').style.display = '';
+    if (!txSupported) {
+      /* Старый монитор без /tx: не выдаём передачу за доступную, кнопку активации прячем */
+      $('txInactiveMsg').textContent = 'Этот монитор без передачи — обновите монитор (нет /tx).';
+      $('txActivate').style.display = 'none';
+      if (txStep !== 0) resetConfirm();
+      $('txConfirm').style.display = 'none';
+    } else {
+      $('txActivate').style.display = '';
+      $('txInactiveMsg').textContent = txLive
+        ? 'Канал ' + ch + ' только слушает (Bus Monitoring). Чтобы передавать, включите активный режим.'
+        : 'Нет связи с контроллером — передача недоступна.';
+      $('txActivate').textContent = 'Включить передачу на CAN ' + ch;
+      $('txActivate').disabled = !txLive;
+    }
+  }
+  renderTxList();
+  validateTx();
+}
+
+function cleanHex(s) { return (s || '').replace(/\s+/g, '').toUpperCase(); }
+function spaceHex(s) { s = cleanHex(s); let o = ''; for (let i = 0; i < s.length; i += 2) o += (i ? ' ' : '') + s.substr(i, 2); return o; }
+
+/* Сверить живые слоты прошивки с постоянным списком передач:
+   работающие — пометить активными и обновить «отправлено»; исчезнувшие — пометить «стоп», НО из списка не убирать. */
+function txFrameMatch(k, s) {
+  return k.ch === s.ch && String(k.id).toUpperCase() === String(s.id).toUpperCase()
+      && !!k.ext === !!s.ext && !!k.fd === !!s.fd && (k.period | 0) === (s.period | 0);
+}
+function reconcileTx(fw) {
+  const live = new Set(fw.map(s => s.slot));
+  for (const e of txKnown) if (e.active && !live.has(e.slot)) { e.active = false; e.slot = null; }  /* остановилась — строка остаётся */
+  for (const s of fw) {
+    let e = txKnown.find(k => k.active && k.slot === s.slot);
+    if (!e) {                                   /* новый живой слот: возобновлённая строка или запущено извне (car.py) */
+      e = txKnown.find(k => !k.active && txFrameMatch(k, s));
+      if (!e) { e = { key: txKeySeq++, brs: false, dlc: 0, data: null }; txKnown.push(e); }
+      e.active = true; e.slot = s.slot;
+    }
+    e.ch = s.ch; e.id = String(s.id).toUpperCase(); e.ext = !!s.ext; e.fd = !!s.fd;
+    e.period = s.period | 0; e.count = s.count | 0; e.sent = s.sent | 0;
+    if (s.dlc !== undefined) e.dlc = s.dlc;
+    if (s.data !== undefined && s.data !== null) e.data = String(s.data);
+  }
+}
+
+function renderTxList() {
+  const wrap = $('txSlotsWrap'), tb = $('txSlots');
+  if (!txKnown.length) { wrap.style.display = 'none'; tb.innerHTML = ''; txSlotsSig = ''; txSentCell = {}; return; }
+  wrap.style.display = '';
+  /* Подпись БЕЗ sent (+ маска активных каналов, чтобы кнопки «Пуск» вовремя разблокировались):
+     если не менялась — строки не пересоздаём (иначе кнопка пересоздаётся каждые 250 мс и клик «уходит в никуда»),
+     а лишь обновляем ячейку «отправлено» на месте. */
+  const sig = txKnown.map(e => [e.key, e.active ? 1 : 0, e.ch, e.id, e.ext ? 1 : 0, e.fd ? 1 : 0, e.dlc, e.data || '', e.period, e.count].join('/')).join('|')
+            + '#' + [0, 1, 2].map(c => chActive(c) ? 1 : 0).join('');
+  if (sig === txSlotsSig) {
+    for (const e of txKnown) { const c = txSentCell[e.key]; if (c) c.textContent = String(e.sent || 0); }
+    return;
+  }
+  txSlotsSig = sig; txSentCell = {};
+  tb.innerHTML = '';
+  for (const e of txKnown) {
+    const tr = document.createElement('tr');
+    tr.dataset.key = e.key;                   /* для клика по строке → подстановка в редактор */
+    if (!e.active) tr.className = 'stale';
+    const tdS = document.createElement('td');
+    tdS.innerHTML = e.active ? '<span class="ok">&#9679;</span>' : '<span class="dim">&#9675;</span>';
+    tdS.title = e.active ? 'идёт' : 'остановлена';
+    tr.appendChild(tdS);
+    const dh = (e.data !== undefined && e.data !== null) ? String(e.data) : null;
+    const cells = [
+      'CAN' + e.ch,
+      String(e.id) + (e.ext ? ' ·29' : '') + (e.fd ? ' ·FD' : ''),
+      dh !== null ? (spaceHex(dh) || '—') : ('— (DLC ' + (e.dlc || 0) + ')'),
+      String(e.period),
+      e.count ? String(e.count) : '∞',
+      String(e.sent || 0)
+    ];
+    let sentTd = null;
+    for (let i = 0; i < cells.length; i++) {
+      const td = document.createElement('td');
+      if (i >= 3) td.className = 'num';
+      td.textContent = cells[i];               /* экранирование: только textContent */
+      if (i === 5) sentTd = td;
+      tr.appendChild(td);
+    }
+    txSentCell[e.key] = sentTd;
+    const tdA = document.createElement('td');   /* кнопка Пуск/Стоп на каждую строку */
+    const b = document.createElement('button');
+    if (e.active) { b.className = 'stop'; b.textContent = 'Стоп'; b.onclick = () => stopEntry(e.key); }
+    else { b.className = 'go'; b.textContent = 'Пуск'; b.disabled = !chActive(e.ch); b.onclick = () => startEntry(e.key); }
+    tdA.appendChild(b); tr.appendChild(tdA);
+    const tdR = document.createElement('td');   /* убрать из списка — только у остановленной */
+    if (!e.active) {
+      const x = document.createElement('button');
+      x.textContent = '✕'; x.title = 'Убрать из списка';
+      x.onclick = () => removeEntry(e.key);
+      tdR.appendChild(x);
+    }
+    tr.appendChild(tdR); tb.appendChild(tr);
+  }
+}
+
+function parseTx() {
+  const err = [];
+  const idRaw = cleanHex($('txId').value).replace(/^0X/, '');
+  const ext = $('txExt').checked, fd = $('txFd').checked, brs = $('txBrs').checked;
+  let id = -1;
+  if (!/^[0-9A-F]{1,8}$/.test(idRaw)) err.push('ID: 1–8 hex-цифр');
+  else {
+    id = parseInt(idRaw, 16);
+    if (ext) { if (id > 0x1FFFFFFF) err.push('ID больше 1FFFFFFF (29-бит максимум)'); }
+    else if (id > 0x7FF) err.push('ID больше 7FF — включите «29-бит»');
+  }
+  const dataRaw = cleanHex($('txData').value);
+  let dlc = 0, data = '';
+  if (!/^[0-9A-F]*$/.test(dataRaw)) err.push('Данные: только hex-цифры');
+  else if (dataRaw.length % 2 !== 0) err.push('Данные: нечётное число hex-цифр (по 2 на байт)');
+  else { data = dataRaw; dlc = dataRaw.length / 2; }
+  if (dlc > (fd ? 64 : 8)) err.push(fd ? 'CAN FD: не больше 64 байт' : 'Классический CAN: не больше 8 байт');
+  if (brs && !fd) err.push('BRS доступен только при FD');
+  return { ok: err.length === 0, err: err, idHex: idRaw, ext: ext, fd: fd, brs: brs, data: data, dlc: dlc };
+}
+
+function validateTx() {
+  const p = parseTx();
+  $('txDlc').innerHTML = '<b>' + p.dlc + '</b>';
+  $('txErr').textContent = p.err.length ? p.err.join('; ') : '';
+  const ch = +$('txCh').value || 0;
+  const canSend = p.ok && txLive && chActive(ch);
+  /* Не снимаем disabled у кнопки, у которой запрос ещё в полёте — иначе тик каждые 250 мс
+     отменил бы защиту от повторной отправки (двойной клик по «Отправить один раз»). */
+  $('txOnce').disabled = !canSend || txOnceBusy;
+  $('txPeriodic').disabled = !canSend || txPeriodicBusy;
+}
+
+function clearTxMsg() { $('txMsg').textContent = ''; $('txMsg').className = ''; }
+function showTxResp(resp, okMsg) {
+  if (resp && (resp.ok === true || resp.resp === 'ok')) {
+    $('txMsg').className = 'msgok';
+    $('txMsg').textContent = okMsg + (resp.slot !== undefined ? ' (слот ' + resp.slot + ')' : '');
+  } else {
+    $('txMsg').className = 'err';
+    $('txMsg').textContent = 'Ошибка: ' + ((resp && resp.error) ? resp.error : 'не удалось отправить');
+  }
+}
+
+async function postTx(body) {
+  try {
+    const r = await fetch('/tx', { method: 'POST', body: JSON.stringify(body) });
+    return await r.json();
+  } catch (e) { return { ok: false, error: 'нет связи с монитором' }; }
+}
+
+function txBody(p, ch) {
+  return { ch: ch, id: p.idHex, ext: p.ext ? 1 : 0, fd: p.fd ? 1 : 0, brs: p.brs ? 1 : 0, dlc: p.dlc, data: p.data };
+}
+
+async function sendOnce() {
+  const p = parseTx(); const ch = +$('txCh').value || 0;
+  if (txOnceBusy || !p.ok || !chActive(ch)) return;
+  const b = txBody(p, ch); b.period = 0;      /* одиночная отправка */
+  txOnceBusy = true; $('txOnce').disabled = true;
+  try { showTxResp(await postTx(b), 'Отправлен один кадр'); }
+  finally { txOnceBusy = false; validateTx(); }
+}
+
+async function sendPeriodic() {
+  const p = parseTx(); const ch = +$('txCh').value || 0;
+  if (txPeriodicBusy || !p.ok || !chActive(ch)) return;
+  let period = parseInt($('txPeriod').value, 10);
+  let count = parseInt($('txCount').value, 10);
+  if (!(period >= 5)) { $('txMsg').className = 'err'; $('txMsg').textContent = 'Период не меньше 5 мс'; return; }
+  if (!(count >= 0)) count = 0;
+  const b = txBody(p, ch); b.period = period; b.count = count;
+  txPeriodicBusy = true; $('txPeriodic').disabled = true;
+  try {
+    const resp = await postTx(b);
+    if (resp && (resp.ok === true || resp.resp === 'ok') && resp.slot !== undefined) {
+      /* зарегистрировать строку в постоянном списке (или обновить такую же) */
+      const idU = p.idHex.toUpperCase();
+      let e = txKnown.find(k => k.ch === ch && String(k.id).toUpperCase() === idU && !!k.ext === p.ext && !!k.fd === p.fd && (k.period | 0) === period);
+      if (!e) { e = { key: txKeySeq++ }; txKnown.push(e); }
+      e.ch = ch; e.id = idU; e.ext = p.ext; e.fd = p.fd; e.brs = p.brs; e.dlc = p.dlc;
+      e.data = p.data; e.period = period; e.count = count; e.slot = resp.slot; e.active = true; e.sent = 0;
+      renderTxList();
+    }
+    showTxResp(resp, 'Периодическая передача запущена');
+  } finally { txPeriodicBusy = false; validateTx(); }
+}
+
+async function stopEntry(key) {
+  const e = txKnown.find(k => k.key === key);
+  if (!e || !e.active) return;
+  const slot = e.slot;
+  e.active = false; e.slot = null;            /* оптимистично: строка остаётся, помечается «стоп» */
+  renderTxList();
+  try { await fetch('/tx/stop', { method: 'POST', body: JSON.stringify({ slot: slot }) }); } catch (err) {}
+}
+async function startEntry(key) {
+  const e = txKnown.find(k => k.key === key);
+  if (!e || e.active || txStartBusy.has(key)) return;
+  if (!chActive(e.ch)) {
+    $('txMsg').className = 'err';
+    $('txMsg').textContent = 'Канал ' + e.ch + ' не в активном режиме — сначала включите передачу на CAN ' + e.ch;
+    return;
+  }
+  txStartBusy.add(key);
+  try {
+    const body = { ch: e.ch, id: e.id, ext: e.ext ? 1 : 0, fd: e.fd ? 1 : 0, brs: e.brs ? 1 : 0, dlc: e.dlc, data: e.data || '', period: e.period, count: e.count };
+    const resp = await postTx(body);
+    if (resp && (resp.ok === true || resp.resp === 'ok') && resp.slot !== undefined) {
+      e.slot = resp.slot; e.active = true; e.sent = 0;
+      showTxResp(resp, 'Передача возобновлена');
+    } else showTxResp(resp, '');
+  } finally { txStartBusy.delete(key); renderTxList(); }
+}
+function removeEntry(key) {
+  const e = txKnown.find(k => k.key === key);
+  if (!e || e.active) return;                  /* активную не убираем — сначала «Стоп» */
+  txKnown = txKnown.filter(k => k.key !== key);
+  renderTxList();
+}
+async function stopAll() {
+  try { await fetch('/tx/stop', { method: 'POST', body: '' }); } catch (e) {}
+  for (const e of txKnown) { e.active = false; e.slot = null; }   /* всё останавливаем, но строки оставляем */
+  renderTxList();
+}
+function clearTxList() {                        /* убрать из списка все остановленные */
+  txKnown = txKnown.filter(k => k.active);
+  renderTxList();
+}
+
+/* Клик по строке списка передачи — подставить её параметры в редактор (можно поправить и слать заново) */
+function fillFromEntry(e) {
+  if (!e) return;
+  openTx();
+  if (e.ch < nch) $('txCh').value = String(e.ch);
+  $('txId').value = String(e.id).toUpperCase();
+  $('txExt').checked = !!e.ext;
+  $('txFd').checked = !!e.fd;
+  $('txBrs').checked = !!e.brs;
+  $('txData').value = (e.data !== undefined && e.data !== null) ? spaceHex(String(e.data)) : '';
+  if (e.period) $('txPeriod').value = String(e.period);
+  $('txCount').value = String(e.count || 0);
+  resetConfirm();
+  clearTxMsg();
+  renderTxPanel();
+  $('txCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+async function activateCh(ch) {
+  const ci = txCan[ch] || {};
+  const o = { cmd: 'sniff', ch: ch, on: 1, tx: 1 };   /* активный режим (Normal): скорость/FD из состояния канала */
+  if (ci.bitrate) o.br = ci.bitrate;
+  o.fd = (ci.mode === 'FD') ? 1 : 0;
+  if (o.fd && ci.dbitrate) o.dbr = ci.dbitrate;
+  await cmd(o);
+}
+
+function resetConfirm() {
+  txStep = 0;
+  $('txConfirm').style.display = 'none';
+  $('txActivate').style.display = '';
+  $('txActivate').disabled = !txLive;
+}
+
+/* Раскрытие/сворачивание карточки */
+function toggleTx(force) {
+  const open = force !== undefined ? force : ($('txBody').style.display === 'none');
+  $('txBody').style.display = open ? '' : 'none';
+  $('txToggle').innerHTML = (open ? '&#9662;' : '&#9656;') + ' Передача <span class="dim">(запись в шину)</span>';
+}
+function openTx() { if ($('txBody').style.display === 'none') toggleTx(true); }
+
+/* Клик по строке «Ленты»/«По ID» — подставить ID, данные и флаги в панель */
+function fillFromFrame(ch, id, data, fl) {
+  fl = fl || '';
+  openTx();
+  if (ch !== undefined && ch !== '' && +ch < nch) $('txCh').value = String(+ch);
+  $('txId').value = (id || '').toUpperCase();
+  $('txExt').checked = fl.indexOf('x') >= 0;
+  $('txFd').checked = fl.indexOf('f') >= 0;
+  $('txBrs').checked = fl.indexOf('b') >= 0;
+  $('txData').value = (fl.indexOf('r') >= 0 || !data || /^R/i.test(data)) ? '' : spaceHex(data);
+  clearTxMsg();
+  renderTxPanel();
+  $('txCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+$('txToggle').onclick = () => toggleTx();
+
+/* ── Разбор кадра на биты (двойной клик по строке; как в CAN-Hacker) ──
+   Окно обновляется вживую из /can/ids и подсвечивает изменившиеся биты —
+   удобно ловить сигнал: жмёшь кнопку в машине и видишь, какой бит меняется.
+   Клик по биту копирует спецификацию поля CH:ID:БАЙТ.БИТ:1:le (формат CAN_HUNT). */
+let bitView = null;      /* {ch, id, prev} — открытый разбор, либо null */
+let lastIds = [];        /* последний список ID из /can/ids (для живого обновления окна) */
+let rowClickTimer = null;
+
+function findIdRow(ch, id) {
+  ch = String(ch); id = String(id).toUpperCase();
+  for (const r of lastIds) if (String(r.ch) === ch && String(r.id).toUpperCase() === id) return r;
+  return null;
+}
+function openBits(ch, id) {
+  bitView = { ch: String(ch), id: String(id).toUpperCase(), prev: null };
+  $('bitModal').style.display = 'flex';
+  $('bitHint').innerHTML = 'Клик по биту — скопировать спецификацию поля <b>CH:ID:БАЙТ.БИТ:1:le</b>.';
+  refreshBits();
+}
+function closeBits() { bitView = null; $('bitModal').style.display = 'none'; }
+
+function refreshBits() {
+  if (!bitView) return;
+  const r = findIdRow(bitView.ch, bitView.id);
+  const remote = r && (r.fl || '').indexOf('r') >= 0;
+  const per = r && r.per > 0 ? (r.per < 100 ? r.per.toFixed(1) : r.per.toFixed(0)) + ' мс' : '—';
+  $('bitTitle').textContent = 'CAN' + bitView.ch + ' · ' + bitView.id + '  —  разбор'
+    + (r ? '   (период ' + per + ', кадров ' + r.n + ')' : '   (кадров нет)');
+  const tb = $('bitTbl');
+  if (!r || remote || !r.data) {
+    tb.innerHTML = '<tr><td style="padding:14px;color:#8b949e;text-align:left">'
+      + (remote ? 'Remote-кадр — данных нет.' : 'Кадров с этим ID пока не было.') + '</td></tr>';
+    bitView.prev = null; return;
+  }
+  const data = r.data.toUpperCase();
+  const n = data.length >> 1;
+  const prev = bitView.prev;
+  let h = '<tr><th>Байт</th><th>Hex</th>';
+  for (let b = 7; b >= 0; b--) h += '<th>' + b + '<div class="w">×' + (1 << b).toString(16).toUpperCase() + '</div></th>';
+  h += '<th>Dec</th></tr>';
+  for (let i = 0; i < n; i++) {
+    const hex = data.substr(i * 2, 2);
+    const val = parseInt(hex, 16) || 0;
+    const pval = (prev && prev.length >= (i + 1) * 2) ? (parseInt(prev.substr(i * 2, 2), 16) || 0) : null;
+    const byteChg = pval !== null && pval !== val;
+    h += '<tr><td class="bidx">' + i + '</td><td class="hexv' + (byteChg ? ' chg' : '') + '">' + hex + '</td>';
+    for (let b = 7; b >= 0; b--) {
+      const on = (val >> b) & 1;
+      const bitChg = pval !== null && (((pval ^ val) >> b) & 1);
+      h += '<td class="bcell" data-byte="' + i + '" data-bit="' + b + '"><span class="bit'
+         + (on ? ' on' : '') + (bitChg ? ' chg' : '') + '">' + (on ? '&#10003;' : '') + '</span></td>';
+    }
+    h += '<td class="decv">' + val + '</td></tr>';
+  }
+  tb.innerHTML = h;
+  bitView.prev = data;
+}
+
+$('bitTbl').addEventListener('click', (e) => {
+  const td = e.target.closest('td.bcell');
+  if (!td || !bitView) return;
+  const spec = bitView.ch + ':' + bitView.id + ':' + td.dataset.byte + '.' + td.dataset.bit + ':1:le';
+  $('bitHint').innerHTML = 'Поле: <b>' + spec + '</b>';
+  try { navigator.clipboard.writeText(spec).then(() => { $('bitHint').innerHTML = 'Поле: <b>' + spec + '</b> — скопировано'; }, () => {}); } catch (e2) {}
+});
+$('bitClose').onclick = closeBits;
+$('bitModal').addEventListener('click', (e) => { if (e.target === $('bitModal')) closeBits(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && bitView) closeBits(); });
+
+/* Одиночный клик — подставить кадр в панель передачи; двойной — открыть разбор на биты.
+   Одиночный откладываем на 200 мс, чтобы двойной клик его отменил (не дёргать панель зря). */
+$('tbody').addEventListener('click', (e) => {
+  const tr = e.target.closest('tr');
+  if (!tr || !tr.dataset || tr.dataset.id === undefined) return;
+  const ds = { ch: tr.dataset.ch, id: tr.dataset.id, data: tr.dataset.data, fl: tr.dataset.fl };
+  if (rowClickTimer) clearTimeout(rowClickTimer);
+  rowClickTimer = setTimeout(() => { rowClickTimer = null; fillFromFrame(ds.ch, ds.id, ds.data, ds.fl); }, 200);
+});
+$('tbody').addEventListener('dblclick', (e) => {
+  const tr = e.target.closest('tr');
+  if (!tr || !tr.dataset || tr.dataset.id === undefined) return;
+  if (rowClickTimer) { clearTimeout(rowClickTimer); rowClickTimer = null; }
+  openBits(tr.dataset.ch, tr.dataset.id);
+});
+['txId', 'txData'].forEach(id => $(id).addEventListener('input', () => { clearTxMsg(); validateTx(); }));
+['txExt', 'txFd', 'txBrs'].forEach(id => $(id).addEventListener('change', () => { clearTxMsg(); validateTx(); }));
+$('txCh').addEventListener('change', () => { resetConfirm(); clearTxMsg(); renderTxPanel(); });
+$('txOnce').onclick = sendOnce;
+$('txPeriodic').onclick = sendPeriodic;
+$('txStopAll').onclick = stopAll;
+$('txClearList').onclick = clearTxList;
+$('txSlots').addEventListener('click', (e) => {
+  if (e.target.closest('button')) return;         /* клики по Пуск/Стоп/✕ — не подставляем */
+  const tr = e.target.closest('tr');
+  if (!tr || tr.dataset.key === undefined) return;
+  const ent = txKnown.find(k => k.key === +tr.dataset.key);
+  if (ent) fillFromEntry(ent);
+});
+
+$('txActivate').onclick = () => {
+  const ch = +$('txCh').value || 0;
+  txStep = 1;
+  $('txActivate').style.display = 'none';
+  $('txConfirm').style.display = '';
+  $('txConfirmMsg').textContent = 'Ступень 1 из 2: канал ' + ch + ' перейдёт в активный режим (Normal) и начнёт ПОДТВЕРЖДАТЬ (ACK) кадры на шине машины. Продолжить?';
+  $('txConfirmYes').textContent = 'Продолжить';
+};
+$('txConfirmYes').onclick = async () => {
+  const ch = +$('txCh').value || 0;
+  if (txStep === 1) {
+    txStep = 2;
+    $('txConfirmMsg').textContent = 'Ступень 2 из 2: ВКЛЮЧИТЬ ПЕРЕДАЧУ на CAN ' + ch + '? Контроллер начнёт слать и подтверждать кадры в реальную шину машины.';
+    $('txConfirmYes').textContent = 'Да, включить передачу на CAN ' + ch;
+    return;
+  }
+  if (txStep === 2) {
+    txStep = 0;
+    $('txConfirmYes').disabled = true;
+    await activateCh(ch);
+    $('txConfirmYes').disabled = false;
+    resetConfirm();
+  }
+};
+$('txConfirmNo').onclick = resetConfirm;
+
+tick();
+</script>
+</body>
+</html>

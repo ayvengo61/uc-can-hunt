@@ -1,0 +1,1290 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Работа с Claude — UniversalController</title>
+<style>
+  /* Страница /assist: пользователь в машине, Claude на этом ПК (CAN_HUNT, SPEC §6–§7).
+     Цвета — как у dashboard/sniffer; шрифты и кнопки крупнее: палец, тряска, солнце. */
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { background: #0e1116; }
+  body { margin: 0; padding: 12px 16px 48px; color: #e6edf3;
+         font-family: -apple-system, "Segoe UI", system-ui, sans-serif; font-size: 18px; line-height: 1.35;
+         -webkit-tap-highlight-color: transparent; }
+  a { color: #58a6ff; text-decoration: none; }
+  .ok { color: #3fb950; } .bad { color: #ff7b72; } .warn { color: #e3b341; } .dim { color: #a3adb8; }
+
+  /* ---------- шапка ---------- */
+  .top { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px;
+         padding-bottom: 12px; margin-bottom: 14px; border-bottom: 1px solid #30363d; }
+  .brand { flex: 1 1 280px; min-width: 0; }
+  .brand .title { font-size: 24px; font-weight: 700; }
+  .brand .sub { font-size: 17px; margin-top: 2px; }
+  .brand .sub a { margin-left: 4px; }
+  .phase { display: flex; flex-direction: column; align-items: center; justify-content: center;
+           min-width: 160px; min-height: 64px; padding: 6px 18px; border: 2px solid #30363d;
+           border-radius: 12px; background: #161b22; }
+  .phase .plbl { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: #a3adb8; font-weight: 700; }
+  .phase .pval { font-size: 28px; font-weight: 800; line-height: 1.1; color: #6e7681;
+                 font-family: Consolas, "Cascadia Mono", monospace; overflow-wrap: anywhere; text-align: center; }
+  .phase.on { border-color: #58a6ff; background: #0f2744; }
+  .phase.on .pval { color: #ffffff; }
+  .sess { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .sessinfo { font-size: 19px; font-weight: 700; }
+  .sessinfo.rec { color: #ff7b72; }
+  .sessctl { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .sessctl input { width: 230px; max-width: 100%; }
+  #sessNameBox { max-width: 100%; }
+  .small { font-size: 16px; }
+
+  /* ---------- кнопки и поля ---------- */
+  button { font-family: inherit; cursor: pointer; touch-action: manipulation; }
+  .btn { min-height: 56px; padding: 10px 20px; font-size: 20px; font-weight: 700; color: #ffffff; line-height: 1.15;
+         background: #21262d; border: 2px solid #484f58; border-radius: 10px; }
+  .btn:hover { border-color: #58a6ff; }
+  .btn:active { transform: scale(.98); filter: brightness(1.25); }
+  .btn:disabled { opacity: .5; cursor: default; transform: none; filter: none; }
+  .btn.go { background: #238636; border-color: #3fb950; }
+  .btn.act { background: #1f6feb; border-color: #58a6ff; }
+  .btn.stop { background: #b62324; border-color: #ff7b72; }
+  .btn.stop.armed { background: #ff7b72; border-color: #ffffff; color: #111418; }
+  .btn.end { background: #845306; border-color: #e3b341; }
+  .btn.rec { background: #21262d; border-color: #ff7b72; }
+  .btn.snd-on { border-color: #3fb950; color: #7ee787; }
+  .btn.snd-off { border-color: #e3b341; color: #f2cc60; }
+  @keyframes sentglow { 0% { box-shadow: 0 0 0 7px #3fb950; } 100% { box-shadow: 0 0 0 0 rgba(63, 185, 80, 0); } }
+  .btn.sent { animation: sentglow .9s ease-out 1; }
+  input[type=text], textarea { font-family: inherit; font-size: 22px; color: #ffffff; background: #0d1117;
+         border: 2px solid #484f58; border-radius: 10px; padding: 10px 14px; min-height: 56px; }
+  input[type=text]:focus, textarea:focus { outline: none; border-color: #58a6ff; }
+  input::placeholder, textarea::placeholder { color: #6e7681; }
+  .status { font-size: 19px; font-weight: 600; margin-top: 8px; min-height: 1.35em; }
+  .status.small { font-size: 16px; margin-top: 0; }
+
+  .banner { background: #4a1113; border: 2px solid #ff7b72; color: #ffdcd7; border-radius: 12px;
+            padding: 12px 16px; margin-bottom: 14px; font-size: 21px; font-weight: 600; }
+  .soundbar { display: block; width: 100%; margin: 0 0 14px; padding: 12px 16px; min-height: 56px; border-radius: 12px;
+              background: #3d2e00; border: 2px solid #e3b341; color: #f2cc60; font: inherit; font-size: 20px; font-weight: 700;
+              text-align: left; }
+  .soundbar:hover { border-color: #f2cc60; }
+
+  /* ---------- раскладка: две колонки, на узком экране одна ---------- */
+  .cols { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 14px; align-items: start; }
+  .col { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+  @media (max-width: 1000px) {
+    .cols { display: flex; flex-direction: column; align-items: stretch; }
+    .col { display: contents; }
+    #cardSay { order: 1; } #cardMark { order: 2; } #cardWatch { order: 3; }
+    #cardNote { order: 4; } #cardSniff { order: 5; } #cardLog { order: 6; }
+  }
+  .card { background: #161b22; border: 2px solid #30363d; border-radius: 12px; padding: 14px 16px; min-width: 0; }
+  .card h2 { font-size: 15px; text-transform: uppercase; letter-spacing: .07em; margin: 0 0 10px; color: #a3adb8; font-weight: 700; }
+  .cardhead { display: flex; justify-content: space-between; align-items: baseline; gap: 6px 14px; flex-wrap: wrap; margin-bottom: 10px; }
+  .cardhead h2 { margin: 0; }
+  .cardhead .age { font-size: 18px; color: #a3adb8; font-weight: 600; }
+
+  /* ---------- инструкция ---------- */
+  .say { border-width: 3px; }
+  .say.pending { border-color: #e3b341; }
+  .say.answered { border-color: #238636; }
+  .saytext { font-size: 34px; font-weight: 600; line-height: 1.28; color: #ffffff;
+             white-space: pre-wrap; overflow-wrap: anywhere; min-height: 1.3em; }
+  .saytext.waiting { font-size: 30px; font-weight: 400; color: #a3adb8; }
+  .sayinput { margin-top: 18px; }
+  .sayinput label { display: block; font-size: 24px; font-weight: 700; color: #f2cc60; margin-bottom: 8px; }
+  .sayinput .row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .sayinput input { flex: 1 1 220px; min-width: 0; font-size: 34px; font-weight: 700; min-height: 72px; }
+  .sayinput .btn { min-height: 72px; font-size: 26px; padding: 10px 30px; }
+  .saybtns { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 18px; }
+  .saybtns .btn { flex: 1 1 200px; min-height: 84px; font-size: 28px; padding: 10px 18px;
+                  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
+  .saybtns .bl { overflow-wrap: anywhere; }
+  .saybtns .bp { font-size: 15px; font-weight: 600; opacity: .9; }
+  .saystatus { margin-top: 14px; font-size: 22px; font-weight: 700; min-height: 1.4em; }
+  .btn.linklike { min-height: 44px; font-size: 17px; font-weight: 600; margin-top: 8px; background: transparent; color: #58a6ff; }
+  .saybtns .btn:disabled { opacity: .35; }
+  @keyframes flashbg { 0%, 36%, 72% { background: #5c4400; border-color: #ffd33d; }
+                       18%, 54%, 100% { background: #161b22; } }
+  .say.flash { animation: flashbg 2.2s ease-out 1; }
+
+  /* ---------- отметка и сообщение ---------- */
+  .btn.mark { width: 100%; min-height: 108px; font-size: 38px; font-weight: 800;
+              background: #e3b341; border-color: #f2cc60; color: #111418; }
+  .markrow { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 12px; }
+  .markrow label { font-size: 18px; color: #a3adb8; }
+  .markrow input { flex: 1 1 220px; min-width: 0; }
+  .markhint { font-size: 16px; color: #e3b341; margin-top: 6px; }
+  .listen { font-size: 17px; font-weight: 600; margin: 0 0 8px 0; padding: 6px 10px; border-radius: 6px; }
+  .listen.on { color: #3fb950; background: rgba(63,185,80,0.10); }
+  .listen.off { color: #f0b93b; background: rgba(210,153,34,0.14); }
+  textarea { width: 100%; min-height: 96px; resize: vertical; display: block; }
+  .noterow { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
+  .noterow .status { margin-top: 0; }
+
+  /* ---------- наблюдение ---------- */
+  .wgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+  .wcard { background: #0d1117; border: 2px solid #30363d; border-radius: 10px; padding: 10px 12px; min-width: 0; }
+  .wcard .wname { font-size: 21px; font-weight: 700; overflow-wrap: anywhere; }
+  .wcard .wspec { font-size: 13px; color: #8b949e; font-family: Consolas, "Cascadia Mono", monospace; overflow-wrap: anywhere; }
+  .wcard .wval { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin: 4px 0 6px; min-height: 64px; }
+  .wcard .wnum { font-size: 58px; font-weight: 800; line-height: 1.05; color: #ffffff; font-variant-numeric: tabular-nums; }
+  .wcard .wunit { font-size: 22px; font-weight: 600; color: #a3adb8; }
+  .wcard.stale { border-color: #6e7681; }
+  .wcard.stale .wnum { font-size: 36px; color: #8b949e; }
+  .wcard.bon { border-color: #3fb950; }
+  .wcard.bon .wnum { color: #3fb950; }
+  .wcard.boff .wnum { color: #a3adb8; }
+  .wcard canvas { display: block; width: 100%; height: 86px; background: #0a0d12; border-radius: 6px; }
+  .wcard .wfoot { display: flex; justify-content: space-between; gap: 4px 10px; flex-wrap: wrap; font-size: 15px; color: #a3adb8; margin-top: 6px; }
+  .empty { font-size: 19px; color: #a3adb8; padding: 6px 0; }
+
+  /* ---------- сниффер ---------- */
+  .warnbox { background: #3d2e00; border: 2px solid #d29922; color: #f2cc60; border-radius: 10px;
+             padding: 10px 14px; font-size: 19px; font-weight: 600; margin-bottom: 10px; }
+  .chans { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+  .chan { background: #0d1117; border: 2px solid #30363d; border-radius: 10px; padding: 8px 12px; min-width: 0; }
+  .chan.on { border-color: #3fb950; }
+  .chan .cn { font-size: 20px; font-weight: 800; }
+  .chan .cs { font-size: 21px; font-weight: 700; }
+  .chan .ci { font-size: 14px; color: #a3adb8; margin-top: 2px; overflow-wrap: anywhere; }
+  .sniffsum { font-size: 18px; margin-top: 10px; min-height: 1.35em; }
+  .sniffbar { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; align-items: center; }
+  .linkbtn { display: inline-flex; align-items: center; min-height: 56px; padding: 0 18px; font-size: 20px; font-weight: 700;
+             border: 2px solid #30363d; border-radius: 10px; color: #58a6ff; }
+  .linkbtn:hover { border-color: #58a6ff; }
+
+  /* ---------- журнал ---------- */
+  .log { list-style: none; margin: 0; padding: 0; max-height: 520px; overflow-y: auto; }
+  .log li { display: grid; grid-template-columns: 5.4em 5.6em minmax(0, 1fr); gap: 8px;
+            padding: 7px 2px; border-bottom: 1px solid #21262d; font-size: 17px; }
+  .log li.empty { display: block; color: #a3adb8; }
+  .log .et { color: #8b949e; font-family: Consolas, "Cascadia Mono", monospace; font-size: 15px; padding-top: 2px; }
+  .log .ew { font-weight: 700; }
+  .log .by-claude .ew { color: #d2a8ff; }
+  .log .by-user .ew { color: #58a6ff; }
+  .log .by-system .ew { color: #8b949e; }
+  .log .ex { overflow-wrap: anywhere; }
+  .log li.hl .ex { color: #ffffff; font-weight: 600; }
+  @keyframes newrow { 0% { background: #2d3a12; } 100% { background: transparent; } }
+  .log li.fresh { animation: newrow 2.5s ease-out 1; }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="brand">
+    <div class="title">Совместная работа с Claude</div>
+    <div class="sub"><span id="board" class="dim">плата —</span> · <span id="conn" class="dim">проверяю связь…</span>
+      · <a href="/">дашборд</a> · <a href="/sniffer" target="_blank">сниффер</a></div>
+  </div>
+  <div class="phase" id="phaseBox" title="Текущая фаза эксперимента"><span class="plbl">фаза</span><span class="pval" id="phase">—</span></div>
+  <div class="sess">
+    <div id="sessInfo" class="sessinfo dim">Запись: —</div>
+    <div class="sessctl">
+      <span id="sessNameBox"><input id="sessName" type="text" placeholder="имя записи, напр. rpm" maxlength="40" autocomplete="off" spellcheck="false"></span>
+      <button id="bSess" class="btn rec" type="button" disabled>● Начать запись</button>
+    </div>
+    <div id="sessHint" class="small dim"></div>
+    <div id="sessStatus" class="status small"></div>
+  </div>
+  <button id="bSound" class="btn snd-off" type="button">Включить звук</button>
+</header>
+
+<div id="banner" class="banner" hidden></div>
+<div id="recWarn" class="banner" hidden></div>
+<button id="soundBar" class="soundbar" type="button" hidden>Звук выключен — нажмите здесь, чтобы слышать сигнал новой инструкции</button>
+
+<div class="cols">
+  <div class="col">
+    <section class="card say" id="cardSay">
+      <div class="cardhead"><h2>Инструкция от Claude <span id="sayNo" class="dim"></span></h2><span id="sayAge" class="age"></span></div>
+      <div id="sayText" class="saytext waiting">Жду указаний от Claude…</div>
+      <div id="sayInput" class="sayinput" hidden>
+        <label id="sayInputLabel" for="sayValue"></label>
+        <div class="row">
+          <input id="sayValue" type="text" autocomplete="off" spellcheck="false">
+          <button id="bSayValue" class="btn go" type="button">Отправить</button>
+        </div>
+      </div>
+      <div id="sayButtons" class="saybtns"></div>
+      <div id="sayStatus" class="saystatus"></div>
+      <button id="bChange" class="btn small linklike" type="button" hidden>Изменить ответ</button>
+    </section>
+
+    <section class="card" id="cardMark">
+      <button id="bMark" class="btn mark" type="button">Отметка — сейчас!</button>
+      <div class="markrow">
+        <label for="markLabel">Подпись:</label>
+        <input id="markLabel" type="text" placeholder="отметка" maxlength="60" autocomplete="off">
+      </div>
+      <div id="markHint" class="markhint" hidden>Запись не идёт — отметка останется только в журнале. Для анализа начните запись.</div>
+      <div id="markStatus" class="status"></div>
+    </section>
+
+    <section class="card" id="cardNote">
+      <h2>Сообщение для Claude</h2>
+      <div id="claudeListen" class="listen off">● Claude сейчас не слушает страницу</div>
+      <textarea id="noteText" rows="2" maxlength="2000" placeholder="Например: на холостых стрелка гуляет 750–850"></textarea>
+      <div class="noterow">
+        <button id="bNote" class="btn act" type="button">Отправить сообщение</button>
+        <span id="noteStatus" class="status"></span>
+      </div>
+    </section>
+  </div>
+
+  <div class="col">
+    <section class="card" id="cardWatch">
+      <h2>Наблюдение</h2>
+      <div id="watchMsg" class="empty">Claude пока ничего не поставил в наблюдение.</div>
+      <div id="watch" class="wgrid"></div>
+    </section>
+
+    <section class="card" id="cardSniff">
+      <h2>Сниффер CAN</h2>
+      <div id="sniffWarn" class="warnbox" hidden></div>
+      <div id="chans" class="chans"></div>
+      <div id="sniffSum" class="sniffsum"></div>
+      <div class="sniffbar">
+        <button id="bSniffOn" class="btn go" type="button">Включить сниффер на всех шинах</button>
+        <button id="bSniffOff" class="btn stop" type="button">Выключить</button>
+        <a class="linkbtn" href="/sniffer" target="_blank">Открыть сниффер</a>
+      </div>
+      <div id="sniffStatus" class="status"></div>
+    </section>
+
+    <section class="card" id="cardLog">
+      <h2>Журнал (последние 40)</h2>
+      <ol id="log" class="log"></ol>
+    </section>
+  </div>
+</div>
+
+<script>
+'use strict';
+/* =============================================================================
+ * Страница /assist — совместный поиск сигналов (CAN_HUNT, SPEC §6–§7).
+ * Опрос без наложения (следующий запрос ставится таймером после ответа):
+ *   /coach/state (+ /coach/events?since=SEQ, если seq вырос) ~300 мс,
+ *   /watch/values ~250 мс, /data ~1 с (связь с контроллером и состояние сниффера).
+ * Всё, что пришло от монитора (тексты Claude, подписи, имена), кладётся в DOM
+ * только через textContent.
+ * ============================================================================= */
+
+const $ = id => document.getElementById(id);
+function el(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text !== undefined && text !== null) e.textContent = String(text);
+  return e;
+}
+function setText(e, s) { s = String(s); if (e.textContent !== s) e.textContent = s; }
+function setCls(e, c) { if (e.className !== c) e.className = c; }
+function flash(e, cls) { e.classList.remove(cls); void e.offsetWidth; e.classList.add(cls); }
+function setStatus(e, text, kind, ttl) {
+  e.textContent = text;
+  e.className = e.className.replace(/\b(ok|bad|warn|dim)\b/g, '').trim() + (kind ? ' ' + kind : '');
+  if (ttl) setTimeout(() => { if (e.textContent === text) e.textContent = ''; }, ttl);
+}
+
+/* ---------- состояние страницы ---------- */
+const S = {
+  coach: 'init',                 // 'ok' | 'offline' | 'old' (монитор без /coach — 404)
+  say: null, sayKey: null,       // текущая инструкция и её ключ (id@t)
+  answered: false,               // монитор: был ли уже ответ на эту инструкцию
+  listening: null,               // слушает ли Claude страницу (null — монитор старый, не знает)
+  localAnswer: '', sayErr: '',   // что ответили с этой страницы / ошибка отправки
+  allowChange: false,            // ответ уже есть, но пользователь нажал «Изменить ответ» — кнопки снова активны
+  sendBusy: false,               // ответ отправляется
+  phase: '', session: null, board: '', channels: 0, stateSeen: false,
+  lastSeq: -1, events: [], logDirty: true,
+  srvOff: 0,                     // время монитора − время браузера, с (по /watch/values.t)
+  dataErr: false, connected: false, live: false, comPort: '', sniff: null, can: [],
+  frSamples: [], sniffBusy: false,
+  watchErr: '',
+  stopArm: 0, sessBusy: false, marks: 0,
+};
+const baseTitle = document.title;
+
+/* ---------- HTTP ---------- */
+class HttpError extends Error {
+  constructor(status) { super('HTTP ' + status); this.status = status; }
+}
+async function api(path, body) {
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), 4000);
+  try {
+    const opt = { cache: 'no-store', signal: ctl.signal };
+    if (body !== undefined) {
+      opt.method = 'POST';
+      opt.headers = { 'Content-Type': 'application/json' };
+      opt.body = JSON.stringify(body);
+    }
+    const r = await fetch(path, opt);
+    if (!r.ok) throw new HttpError(r.status);
+    return await r.json();
+  } finally {
+    clearTimeout(timer);
+  }
+}
+const isOld = e => e instanceof HttpError && e.status === 404;
+
+/* Циклы опроса: следующий вызов — только после завершения предыдущего.
+   В фоновой вкладке браузер «усыпляет» цепочки setTimeout (Chrome: через 5 мин — раз в минуту), а новую
+   инструкцию со звуком нужно заметить сразу, даже если окно браузера закрыто окном Claude Code. Поэтому такт
+   даёт выделенный Worker (его таймеры так не троттлятся); если Worker недоступен — обычный setTimeout. */
+const tasks = [];
+let ticker = null;
+function runDue() {
+  const now = performance.now();
+  for (const t of tasks) {
+    if (t.busy || now < t.next) continue;
+    t.busy = true;
+    Promise.resolve().then(t.fn).catch(e => console.error(e)).then(() => {
+      t.busy = false;
+      t.next = Math.max(performance.now() + 60, now + t.period);
+    });
+  }
+}
+function startTicker() {
+  try {
+    const src = 'setInterval(function () { postMessage(0); }, 100);';
+    const w = new Worker(URL.createObjectURL(new Blob([src], { type: 'text/javascript' })));
+    w.onmessage = runDue;
+    w.onerror = () => { if (ticker === w) { ticker = 'timer'; w.terminate(); timerTick(); } };
+    ticker = w;
+  } catch (e) {
+    ticker = 'timer';
+    timerTick();
+  }
+}
+function timerTick() { runDue(); setTimeout(timerTick, 100); }
+function loop(fn, period) {
+  tasks.push({ fn: fn, period: period, next: 0, busy: false });
+  if (!ticker) startTicker();
+  runDue();
+}
+
+/* ---------- время и форматирование ---------- */
+const srvNow = () => Date.now() / 1000 + S.srvOff;
+const p2 = n => String(n).padStart(2, '0');
+function hms(t) {
+  if (typeof t !== 'number' || !isFinite(t)) return '';
+  const d = new Date(t * 1000);
+  return p2(d.getHours()) + ':' + p2(d.getMinutes()) + ':' + p2(d.getSeconds());
+}
+const hmsNow = () => hms(Date.now() / 1000);
+function ago(sec) {
+  sec = Math.max(0, Math.floor(sec));
+  if (sec < 60) return sec + ' с назад';
+  if (sec < 3600) return Math.floor(sec / 60) + ' мин ' + (sec % 60) + ' с назад';
+  return Math.floor(sec / 3600) + ' ч ' + Math.floor(sec % 3600 / 60) + ' мин назад';
+}
+function dur(sec) {
+  sec = Math.max(0, Math.floor(sec));
+  const h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60), s = sec % 60;
+  return (h ? h + ':' + p2(m) : String(m)) + ':' + p2(s);
+}
+const fmtInt = n => Math.round(Number(n) || 0).toLocaleString('ru-RU');
+function clip(s, n) {
+  s = String(s === undefined || s === null ? '' : s).replace(/\s+/g, ' ').trim();
+  return s.length > n ? s.slice(0, n - 1) + '…' : s;
+}
+const baseName = p => String(p || '').split(/[\\/]/).filter(Boolean).pop() || '';
+const exeName = () => S.board ? 'UC_' + S.board + '_Monitor.exe' : 'UC_…_Monitor.exe';
+
+/* =============================================================================
+ * Звук: WebAudio, короткий двухтональный сигнал. Браузер разрешает звук только
+ * после жеста пользователя, поэтому — кнопка «Включить звук»; выбор помним.
+ * ============================================================================= */
+const SND_KEY = 'canhunt.assist.sound';
+const Snd = { ctx: null, want: false, none: !(window.AudioContext || window.webkitAudioContext) };
+try { Snd.want = localStorage.getItem(SND_KEY) === '1'; } catch (e) { /* хранилище недоступно */ }
+function sndSave() { try { localStorage.setItem(SND_KEY, Snd.want ? '1' : '0'); } catch (e) { /* не страшно */ } }
+function sndCtx() {
+  if (Snd.none) return null;
+  if (!Snd.ctx) {
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      Snd.ctx = new AC();
+      Snd.ctx.onstatechange = renderSound;
+    } catch (e) { Snd.none = true; renderSound(); return null; }
+  }
+  if (Snd.ctx.state !== 'running') {
+    try { Snd.ctx.resume().then(renderSound, () => {}); } catch (e) { /* ждём следующего жеста */ }
+  }
+  return Snd.ctx;
+}
+const sndOn = () => Snd.want && !!Snd.ctx && Snd.ctx.state === 'running';
+function beep() {
+  if (!sndOn()) return;
+  try {
+    const c = Snd.ctx, t0 = c.currentTime + 0.03;
+    /* две пары «низкий-высокий», ~0.75 с — слышно при работающем двигателе */
+    for (const [f, dt] of [[880, 0], [1320, 0.17], [880, 0.42], [1320, 0.59]]) {
+      const o = c.createOscillator(), g = c.createGain(), t = t0 + dt;
+      o.type = 'square';
+      o.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.22, t + 0.01);
+      g.gain.setValueAtTime(0.22, t + 0.12);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.15);
+      o.connect(g);
+      g.connect(c.destination);
+      o.start(t);
+      o.stop(t + 0.16);
+    }
+  } catch (e) { /* без звука */ }
+}
+function soundClick() {
+  if (Snd.none) return;
+  if (sndOn()) { Snd.want = false; sndSave(); renderSound(); return; }
+  Snd.want = true;
+  sndSave();
+  const c = sndCtx();
+  if (c) {
+    if (c.state === 'running') beep();
+    else c.resume().then(() => { renderSound(); beep(); }, () => {});
+  }
+  renderSound();
+}
+/* Звук был включён раньше — разблокируем при первом касании страницы. */
+function unlockAudio(e) {
+  if (e && e.target && e.target.closest && e.target.closest('#bSound, #soundBar')) return;
+  if (Snd.want && !sndOn()) sndCtx();
+}
+function soundBarClick() {
+  if (sndOn()) return;
+  if (!Snd.want) { soundClick(); return; }
+  const c = sndCtx();
+  if (c) c.resume().then(() => { renderSound(); beep(); }, () => {});
+}
+function renderSound() {
+  const b = $('bSound');
+  /* крупная жёлтая плашка, пока звук не включён: иначе новую инструкцию легко пропустить */
+  $('soundBar').hidden = Snd.none || sndOn();
+  setText($('soundBar'), Snd.want
+    ? 'Звук включён, но браузер ждёт касания страницы — нажмите здесь'
+    : 'Звук выключен — нажмите здесь, чтобы слышать сигнал новой инструкции');
+  if (Snd.none) { setText(b, 'Звук недоступен'); b.disabled = true; return; }
+  if (sndOn()) {
+    setText(b, 'Звук: вкл');
+    setCls(b, 'btn snd-on');
+    b.title = 'Нажмите, чтобы выключить звуковой сигнал';
+  } else {
+    setText(b, 'Включить звук');
+    setCls(b, 'btn snd-off');
+    b.title = Snd.want ? 'Браузер ждёт касания страницы, чтобы разрешить звук' : 'Звуковой сигнал при новой инструкции';
+  }
+}
+
+/* =============================================================================
+ * /coach/state + /coach/events
+ * ============================================================================= */
+async function pollCoach() {
+  let st;
+  try {
+    st = await api('/coach/state');
+  } catch (e) {
+    setCoach(isOld(e) ? 'old' : 'offline');
+    return;
+  }
+  if (!st || typeof st !== 'object') { setCoach('offline'); return; }
+  setCoach('ok');
+  applyState(st);
+  await pollEvents(typeof st.seq === 'number' ? st.seq : 0);
+}
+
+function setCoach(s) {
+  if (S.coach === s) return;
+  S.coach = s;
+  renderListen();
+  const b = $('banner');
+  if (s === 'offline') {
+    b.textContent = 'Монитор не отвечает. Проверьте, что программа ' + exeName() + ' запущена. Страница переподключится сама.';
+    b.hidden = false;
+  } else if (s === 'old') {
+    b.textContent = 'Этот монитор старой версии: в нём нет совместной работы с Claude. Закройте его, пересоберите (build_exe.bat) и запустите снова.';
+    b.hidden = false;
+    /* инструкция от прежнего монитора больше не актуальна; после возврата — без сигнала */
+    S.say = null;
+    S.sayKey = null;
+    S.stateSeen = false;
+  } else {
+    b.hidden = true;
+  }
+  if (!S.say) renderSayCard();
+  renderHeader();
+  renderSayState();
+  S.logDirty = true;
+  renderLog();
+}
+
+const sayIdOf = say => (say.id !== undefined && say.id !== null ? say.id : say.seq);
+const sayKeyOf = say => (say ? sayIdOf(say) + '@' + say.t : null);
+
+function applyState(st) {
+  S.board = typeof st.board === 'string' ? st.board : '';
+  S.channels = Number(st.channels) || 0;
+  S.phase = typeof st.phase === 'string' ? st.phase : '';
+  S.session = st.session && typeof st.session === 'object' ? st.session : null;
+  S.link = st.link && typeof st.link === 'object' ? st.link : null;   /* связь с контроллером и сниффер (монитор) */
+  S.answered = !!st.answered;
+  /* Слушает ли Claude страницу: монитор знает, висит ли ожидание (car.py ask / wait). Старый монитор поля не даёт → null. */
+  S.listening = st.claude && typeof st.claude === 'object' ? !!st.claude.listening : null;
+  renderListen();
+  const say = st.say && typeof st.say === 'object' ? st.say : null;
+  const key = sayKeyOf(say);
+  const first = !S.stateSeen;
+  S.stateSeen = true;
+  if (key !== S.sayKey) {
+    S.sayKey = key;
+    S.say = say;
+    renderSayCard();
+    if (say && !first) announce();
+  } else {
+    S.say = say;
+  }
+  renderHeader();
+  renderSayState();
+  renderRecWarn();
+}
+
+/* Красная плашка во время записи: кадры не пишутся (нет связи с контроллером, сниффер выключен, 0 кадр/с). */
+function renderRecWarn() {
+  const b = $('recWarn'), s = S.session;
+  let t = '';
+  if (S.coach === 'ok' && s && s.active && !S.dataErr) {
+    const lk = S.link;
+    const live = lk ? !!lk.connected : S.live;
+    const sniff = lk ? lk.sniff : (S.live && S.sniff && Array.isArray(S.sniff.on) ? S.sniff.on : null);
+    const fps = lk && Array.isArray(lk.fps) ? lk.fps.reduce((a, x) => a + (Number(x) || 0), 0) : null;
+    if (!live) {
+      t = 'ИДЁТ ЗАПИСЬ, НО КОНТРОЛЛЕР НЕ НА СВЯЗИ — кадры не записываются. Проверьте USB-кабель и питание контроллера.';
+    } else if (Array.isArray(sniff) && !sniff.some(x => x)) {
+      t = 'ИДЁТ ЗАПИСЬ, НО СНИФФЕР ВЫКЛЮЧЕН — кадры не записываются. Нажмите «Включить сниффер на всех шинах» ниже или напишите Claude.';
+    } else if (fps === 0) {
+      if (!S.zeroSince) S.zeroSince = Date.now();
+      const z = Date.now() - S.zeroSince;
+      if (z > 5000) t = 'ИДЁТ ЗАПИСЬ, НО КАДРОВ С ШИНЫ НЕТ уже ' + Math.round(z / 1000) + ' с — зажигание включено? контроллер подключён к шине?';
+    }
+    if (fps !== 0) S.zeroSince = 0;
+  } else {
+    S.zeroSince = 0;
+  }
+  setText(b, t);
+  b.hidden = !t;
+}
+
+async function pollEvents(seq) {
+  let initial = false;
+  if (S.lastSeq < 0 || seq < S.lastSeq) {
+    /* первый опрос или монитор перезапущен (seq начался заново): берём хвост */
+    S.events = [];
+    S.logDirty = true;
+    S.lastSeq = Math.max(0, seq - 60);
+    initial = true;
+  }
+  if (seq > S.lastSeq) {
+    let r;
+    try { r = await api('/coach/events?since=' + S.lastSeq); } catch (e) { r = null; }
+    if (r && typeof r === 'object') {
+      const evs = Array.isArray(r.events) ? r.events : [];
+      let top = S.lastSeq;
+      for (const e of evs) {
+        if (!e || typeof e !== 'object' || typeof e.seq !== 'number' || e.seq <= S.lastSeq) continue;
+        e._fresh = !initial;
+        S.events.push(e);
+        if (e.seq > top) top = e.seq;
+      }
+      if (!evs.length && typeof r.seq === 'number' && r.seq > top) top = r.seq;
+      S.lastSeq = top;
+      S.events.sort((a, b) => a.seq - b.seq);
+      if (S.events.length > 40) S.events = S.events.slice(-40);
+      S.logDirty = true;
+    }
+  }
+  renderLog();
+}
+
+/* ---------- инструкция ---------- */
+function renderSayCard() {
+  const say = S.say, txt = $('sayText'), box = $('sayButtons');
+  S.localAnswer = '';
+  S.sayErr = '';
+  S.allowChange = false;
+  box.replaceChildren();
+  if (!say) {
+    txt.className = 'saytext waiting';
+    txt.textContent = S.coach === 'old' ? 'Совместная работа недоступна: монитор старой версии.' : 'Жду указаний от Claude…';
+    $('sayInput').hidden = true;
+    setText($('sayNo'), '');
+    return;
+  }
+  txt.className = 'saytext';
+  txt.textContent = typeof say.text === 'string' ? say.text : '';
+  setText($('sayNo'), '№ ' + sayIdOf(say));
+  let btns = Array.isArray(say.buttons) ? say.buttons.filter(b => b && typeof b === 'object') : [];
+  if (!btns.length) btns = [{ label: 'Готово', phase: null }];
+  for (const b of btns) {
+    const label = b.label !== undefined && b.label !== null && String(b.label).trim() ? String(b.label) : 'Готово';
+    const phase = typeof b.phase === 'string' ? b.phase : null;
+    const btn = el('button', 'btn ' + (phase === null ? 'act' : phase === '' ? 'end' : 'go'));
+    btn.type = 'button';
+    btn.append(el('span', 'bl', label));
+    if (phase !== null) btn.append(el('span', 'bp', phase === '' ? 'закончит текущую фазу' : 'начнёт фазу ' + phase));
+    btn.addEventListener('click', () => sendButton(say, label, phase, btn));
+    box.append(btn);
+  }
+  const kind = say.input === 'number' || say.input === 'text' ? say.input : null;
+  $('sayInput').hidden = !kind;
+  if (kind) {
+    const lbl = typeof say.input_label === 'string' && say.input_label.trim() ? say.input_label
+              : (kind === 'number' ? 'Введите число' : 'Введите ответ');
+    $('sayInputLabel').textContent = lbl;
+    const v = $('sayValue');
+    v.value = '';
+    v.inputMode = kind === 'number' ? 'decimal' : 'text';
+    v.placeholder = kind === 'number' ? 'число' : 'ответ';
+  }
+}
+
+function renderSayState() {
+  const card = $('cardSay'), st = $('sayStatus');
+  const has = !!S.say;
+  const ans = has && (S.answered || !!S.localAnswer);
+  card.classList.toggle('pending', has && !ans);
+  card.classList.toggle('answered', ans);
+  let text = '', cls = 'saystatus';
+  if (S.sayErr) { text = S.sayErr; cls += ' bad'; }
+  else if (S.localAnswer) { text = S.localAnswer; cls += ' ok'; }
+  else if (ans) { text = 'Ответ отправлен'; cls += ' ok'; }
+  else if (has) { text = 'Ждёт вашего ответа'; cls += ' warn'; }
+  setText(st, text);
+  setCls(st, cls);
+  setText($('sayAge'), has && typeof S.say.t === 'number' ? 'получено ' + ago(srvNow() - S.say.t) : '');
+  /* Ответ уже отправлен — кнопки этой инструкции гасим: случайное нажатие старой кнопки меняло бы фазу, пока
+     Claude готовит следующий шаг. Изменить ответ — только явно, кнопкой «Изменить ответ». */
+  const lock = ans && !S.allowChange;
+  for (const b of $('sayButtons').children) b.disabled = lock || S.sendBusy;
+  $('bSayValue').disabled = lock || S.sendBusy;
+  $('sayValue').disabled = lock;
+  $('bChange').hidden = !(has && ans && !S.allowChange);
+}
+
+function changeAnswer() {
+  S.allowChange = true;
+  S.localAnswer = '';
+  renderSayState();
+}
+
+/* Новая инструкция: звук, вспышка, заголовок вкладки, прокрутка к карточке. */
+function announce() {
+  beep();
+  const card = $('cardSay');
+  flash(card, 'flash');
+  if (document.hidden) document.title = '● Новая инструкция — ' + baseTitle;
+  const r = card.getBoundingClientRect();
+  const a = document.activeElement;
+  const typing = a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA') && a.id !== 'sayValue';
+  if (!typing && (r.top < 0 || r.top > window.innerHeight * 0.5)) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+async function sendButton(say, label, phase, btn) {
+  if (btn.disabled || S.sendBusy) return;
+  S.sendBusy = true;
+  renderSayState();
+  const mine = () => sayKeyOf(say) === S.sayKey;
+  try {
+    const r = await api('/coach/event', { kind: 'button', say: sayIdOf(say), label: label, phase: phase });
+    if (r && r.ok) {
+      if (mine()) { S.localAnswer = 'Ответ отправлен: «' + label + '» в ' + hmsNow(); S.sayErr = ''; S.allowChange = false; }
+      flash(btn, 'sent');
+    } else if (mine()) {
+      S.sayErr = 'Монитор не принял ответ' + (r && r.error ? ': ' + r.error : '') + '. Нажмите ещё раз.';
+    }
+  } catch (e) {
+    if (mine()) S.sayErr = isOld(e) ? 'Монитор старой версии — ответ не принят.' : 'Не отправлено: нет связи с монитором. Нажмите ещё раз.';
+  }
+  S.sendBusy = false;                 /* после ответа кнопки этой инструкции погашены (renderSayState) */
+  renderSayState();
+}
+
+async function sendValue() {
+  const say = S.say;
+  if (!say || $('sayInput').hidden) return;
+  const inp = $('sayValue'), b = $('bSayValue');
+  if (b.disabled) return;
+  let v = inp.value.trim();
+  if (say.input === 'number') v = v.replace(/\s+/g, '');
+  if (!v) { S.sayErr = 'Поле пустое — введите значение.'; renderSayState(); inp.focus(); return; }
+  if (say.input === 'number' && !/^[-+]?\d+(?:[.,]\d+)?$/.test(v)) {
+    S.sayErr = 'Нужно число, например 2000 или 13,5.';
+    renderSayState();
+    inp.focus();
+    return;
+  }
+  const mine = () => sayKeyOf(say) === S.sayKey;
+  if (S.sendBusy) return;
+  S.sendBusy = true;
+  renderSayState();
+  try {
+    const r = await api('/coach/event', { kind: 'input', say: sayIdOf(say), value: v });
+    if (mine()) {
+      if (r && r.ok) {
+        S.localAnswer = 'Отправлено значение «' + v + '» в ' + hmsNow(); S.sayErr = ''; S.allowChange = false; flash(b, 'sent');
+      } else S.sayErr = 'Монитор не принял значение' + (r && r.error ? ': ' + r.error : '') + '.';
+    }
+  } catch (e) {
+    if (mine()) S.sayErr = 'Не отправлено: нет связи с монитором. Нажмите ещё раз.';
+  }
+  S.sendBusy = false;
+  renderSayState();
+}
+
+/* ---------- отметка и сообщение ---------- */
+let markLock = 0;
+async function sendMark() {
+  const now = performance.now();
+  if (now < markLock) return;            /* дребезг пальца: не чаще раза в 0.3 с */
+  markLock = now + 300;
+  const label = $('markLabel').value.trim() || 'отметка';
+  const b = $('bMark'), st = $('markStatus');
+  flash(b, 'sent');
+  try {
+    const r = await api('/coach/event', { kind: 'mark', label: label });
+    if (r && r.ok) {
+      S.marks++;
+      setStatus(st, 'Отметка «' + label + '» поставлена в ' + hmsNow() + ' · всего с этой страницы: ' + S.marks, 'ok');
+    } else {
+      setStatus(st, 'Монитор не принял отметку' + (r && r.error ? ': ' + r.error : ''), 'bad');
+    }
+  } catch (e) {
+    setStatus(st, 'Отметка НЕ поставлена: нет связи с монитором', 'bad');
+  }
+}
+
+async function sendNote() {
+  const ta = $('noteText'), b = $('bNote'), st = $('noteStatus');
+  const text = ta.value.trim();
+  if (!text) { setStatus(st, 'Сначала напишите сообщение', 'warn', 4000); ta.focus(); return; }
+  if (b.disabled) return;
+  b.disabled = true;
+  try {
+    const r = await api('/coach/event', { kind: 'note', text: text });
+    if (r && r.ok) {
+      if (ta.value.trim() === text) ta.value = '';
+      if (S.listening === false)
+        setStatus(st, 'Сохранено в ' + hmsNow() + ', но Claude сейчас не слушает страницу и не увидит сообщение сам. Напишите ему в чат Claude Code.', 'warn');
+      else
+        setStatus(st, 'Отправлено в ' + hmsNow(), 'ok');
+    } else {
+      setStatus(st, 'Монитор не принял сообщение' + (r && r.error ? ': ' + r.error : ''), 'bad');
+    }
+  } catch (e) {
+    setStatus(st, 'Не отправлено: нет связи с монитором', 'bad');
+  }
+  b.disabled = false;
+}
+
+/* ---------- индикатор «Claude слушает» ---------- */
+function renderListen() {
+  const el = $('claudeListen');
+  if (!el) return;
+  if (S.listening === null || S.coach !== 'ok') { el.hidden = true; return; }
+  el.hidden = false;
+  if (S.listening) {
+    el.className = 'listen on';
+    el.textContent = '● Claude на связи — сообщение и кнопки он увидит сразу';
+  } else {
+    el.className = 'listen off';
+    el.textContent = '● Claude сейчас не слушает страницу — сообщение сохранится, но сам он его не увидит. Напишите ему в чат Claude Code.';
+  }
+}
+
+/* ---------- шапка: плата, фаза, запись ---------- */
+const TR = { а: 'a', б: 'b', в: 'v', г: 'g', д: 'd', е: 'e', ё: 'e', ж: 'zh', з: 'z', и: 'i', й: 'y', к: 'k', л: 'l',
+             м: 'm', н: 'n', о: 'o', п: 'p', р: 'r', с: 's', т: 't', у: 'u', ф: 'f', х: 'h', ц: 'ts', ч: 'ch', ш: 'sh',
+             щ: 'sch', ъ: '', ы: 'y', ь: '', э: 'e', ю: 'yu', я: 'ya' };
+/* Монитор оставит в имени только [A-Za-z0-9_-]; кириллицу заранее переводим в латиницу. */
+function cleanName(s) {
+  let o = '';
+  for (const ch of String(s || '').trim()) {
+    const lo = ch.toLowerCase();
+    if (Object.prototype.hasOwnProperty.call(TR, lo)) o += TR[lo];
+    else if (/[A-Za-z0-9_-]/.test(ch)) o += ch;
+    else if (/[\s.,]/.test(ch)) o += '_';
+  }
+  o = o.replace(/_+/g, '_').replace(/^_+|_+$/g, '').slice(0, 40);
+  return o || 'session';
+}
+function renderNameHint() {
+  const v = $('sessName').value.trim();
+  const c = cleanName(v);
+  setText($('sessHint'), v && c !== v ? 'сохранится как: ' + c : '');
+}
+
+function renderHeader() {
+  setText($('board'), S.board ? 'плата ' + S.board : 'плата —');
+  const ok = S.coach === 'ok';
+  $('phaseBox').classList.toggle('on', ok && !!S.phase);
+  setText($('phase'), !ok ? '—' : (S.phase || 'нет'));
+  renderSession();
+}
+
+const stopArmed = () => S.stopArm && Date.now() - S.stopArm < 3000;
+function renderSession() {
+  const s = S.session, info = $('sessInfo'), b = $('bSess'), box = $('sessNameBox');
+  if (S.coach !== 'ok' || !s) {
+    setText(info, S.coach === 'old' ? 'Запись: монитор без поддержки сессий' : 'Запись: нет связи с монитором');
+    setCls(info, 'sessinfo dim');
+    b.disabled = true;
+    box.hidden = true;
+    $('markHint').hidden = true;
+    return;
+  }
+  b.disabled = S.sessBusy;
+  if (s.active) {
+    const el2 = typeof s.started === 'number' ? ' · ' + dur(srvNow() - s.started) : '';
+    setText(info, '● ИДЁТ ЗАПИСЬ «' + (s.name || '') + '»' + el2 + ' · кадров ' + fmtInt(s.frames));
+    setCls(info, 'sessinfo rec');
+    const armed = stopArmed();
+    setText(b, armed ? 'Точно остановить?' : '■ Остановить запись');
+    setCls(b, 'btn stop' + (armed ? ' armed' : ''));
+    box.hidden = true;
+  } else {
+    setText(info, 'Запись не идёт' + (s.last_dir ? ' · последняя: ' + baseName(s.last_dir) : ''));
+    setCls(info, 'sessinfo dim');
+    setText(b, '● Начать запись');
+    setCls(b, 'btn rec');
+    box.hidden = false;
+  }
+  $('markHint').hidden = !!s.active;
+}
+
+async function sessionClick() {
+  const s = S.session;
+  if (!s || S.sessBusy || S.coach !== 'ok') return;
+  if (s.active) {
+    /* остановка — в два касания, чтобы не оборвать запись случайно */
+    if (!stopArmed()) { S.stopArm = Date.now(); renderSession(); setTimeout(renderSession, 3100); return; }
+    S.stopArm = 0;
+    await sessCall('/session/stop', {},
+      r => 'Запись остановлена: кадров ' + fmtInt(r.frames) + ', событий ' + fmtInt(r.events),
+      'Запись уже не шла');
+  } else {
+    const name = cleanName($('sessName').value);
+    await sessCall('/session/start', { name: name }, () => 'Запись «' + name + '» начата', 'Монитор не начал запись');
+  }
+}
+async function sessCall(path, body, okText, failText) {
+  const st = $('sessStatus');
+  S.sessBusy = true;
+  renderSession();
+  try {
+    const r = await api(path, body);
+    if (r && r.ok) setStatus(st, okText(r), 'ok', 8000);
+    else setStatus(st, failText + (r && r.error ? ': ' + r.error : ''), 'bad', 8000);
+  } catch (e) {
+    setStatus(st, isOld(e) ? 'Монитор старой версии — запись недоступна' : 'Нет связи с монитором', 'bad', 8000);
+  }
+  /* держим кнопку выключенной, пока /coach/state не покажет новое состояние */
+  setTimeout(() => { S.sessBusy = false; renderSession(); }, 700);
+}
+
+/* =============================================================================
+ * Наблюдение: /watch/values
+ * ============================================================================= */
+const W = { sig: null, list: [] };
+function specLen(spec) {
+  const n = parseInt(String(spec || '').split(':')[3], 10);
+  return isFinite(n) ? n : 0;
+}
+/* Знаков после запятой — по ЧИСЛОВЫМ значениям FACTOR/OFFSET (…*0.25 → 2, *1e-2 → 2, *2.5E-1 → 2, -40 → 0),
+   не больше 3. Запись разбирается как в мониторе (SPEC §2): ORDER, затем [:s][*FACTOR][+OFFSET]. */
+const SPEC_NUM = '(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?';
+const SPEC_SCALE = new RegExp('[lLbB][eE](?::[sS])?(?:\\*([-+]?' + SPEC_NUM + '))?([-+]' + SPEC_NUM + ')?$');
+function decFor(x) {
+  x = Math.abs(Number(x));
+  if (!x || !isFinite(x)) return 0;
+  for (let d = 0; d < 3; d++) {
+    const y = x * Math.pow(10, d);
+    if (Math.abs(y - Math.round(y)) < 1e-9 * Math.max(1, y)) return d;
+  }
+  return 3;
+}
+function specDec(spec) {
+  const m = SPEC_SCALE.exec(String(spec || '').trim());
+  if (!m) return 0;
+  return Math.min(3, Math.max(m[1] ? decFor(parseFloat(m[1])) : 0, m[2] ? decFor(parseFloat(m[2])) : 0));
+}
+/* Разряды группируем только от 10 000: «1999» читать легче, чем «1 999». */
+const fmtVal = (v, dec) => v.toLocaleString('ru-RU', { minimumFractionDigits: 0, maximumFractionDigits: dec,
+                                                       useGrouping: Math.abs(v) >= 10000 });
+
+async function pollWatch() {
+  let r;
+  try {
+    r = await api('/watch/values');
+  } catch (e) {
+    S.watchErr = isOld(e) ? 'old' : 'offline';
+    markWatchDead();
+    renderWatchMsg(W.list.length);
+    return;
+  }
+  S.watchErr = '';
+  if (r && typeof r.t === 'number' && isFinite(r.t)) S.srvOff = r.t - Date.now() / 1000;
+  const vals = r && Array.isArray(r.values) ? r.values.filter(v => v && typeof v === 'object') : [];
+  const sig = vals.map(v => String(v.spec) + '|' + String(v.name) + '|' + String(v.unit)).join('\n');
+  if (sig !== W.sig) buildWatch(vals, sig);
+  const now = performance.now();
+  vals.forEach((v, i) => updateWatchCard(W.list[i], v, now));
+  renderWatchMsg(vals.length);
+}
+
+function buildWatch(vals, sig) {
+  const old = new Map(W.list.map(c => [c.id, c.hist]));
+  const grid = $('watch');
+  grid.replaceChildren();
+  W.list = vals.map(v => {
+    const id = String(v.spec) + '|' + String(v.name);
+    const hist = old.get(id) || [];
+    old.delete(id);                                   /* дубликаты не делят историю */
+    const c = { id: id, bit: specLen(v.spec) === 1, dec: specDec(v.spec), hist: hist };
+    c.root = el('div', 'wcard');
+    const head = el('div', 'whead');
+    head.append(el('div', 'wname', v.name || 'поле'), el('div', 'wspec', v.spec || ''));
+    c.num = el('span', 'wnum', '—');
+    c.unit = el('span', 'wunit', c.bit ? '' : (v.unit || ''));
+    const val = el('div', 'wval');
+    val.append(c.num, c.unit);
+    c.cv = el('canvas', 'wchart');
+    c.mm = el('span', 'wmm', '');
+    c.raw = el('span', 'wraw', '');
+    const foot = el('div', 'wfoot');
+    foot.append(c.mm, c.raw);
+    c.root.append(head, val, c.cv, foot);
+    grid.append(c.root);
+    return c;
+  });
+  W.sig = sig;
+}
+
+function updateWatchCard(c, v, now) {
+  if (!c) return;
+  const val = typeof v.value === 'number' && isFinite(v.value) ? v.value : null;
+  const age = typeof v.age_ms === 'number' ? v.age_ms : null;
+  const fresh = val !== null && age !== null && age >= 0 && age <= 2000;
+  c.hist.push([now, fresh ? val : null]);
+  while (c.hist.length && now - c.hist[0][0] > 61000) c.hist.shift();
+
+  let cls = 'wcard';
+  if (!fresh) {
+    setText(c.num, 'нет данных');
+    cls += ' stale';
+  } else if (c.bit) {
+    const on = (typeof v.raw === 'number' ? v.raw : val) !== 0;
+    setText(c.num, on ? 'ВКЛ' : 'ВЫКЛ');
+    cls += on ? ' bon' : ' boff';
+  } else {
+    setText(c.num, fmtVal(val, c.dec));
+  }
+  setCls(c.root, cls);
+  c.unit.hidden = !fresh || c.bit;
+
+  let lo = Infinity, hi = -Infinity, n = 0, sw = 0, prev = null;
+  for (const p of c.hist) {
+    const x = p[1];
+    if (x === null) continue;
+    if (x < lo) lo = x;
+    if (x > hi) hi = x;
+    if (prev !== null && x !== prev) sw++;
+    prev = x;
+    n++;
+  }
+  if (!n) setText(c.mm, 'за 60 с данных нет');
+  else if (c.bit) setText(c.mm, 'за 60 с переключений: ' + sw);
+  else setText(c.mm, 'за 60 с: мин ' + fmtVal(lo, c.dec) + ' · макс ' + fmtVal(hi, c.dec));
+
+  let rawText = '';
+  if (fresh) rawText = typeof v.raw === 'number' ? 'сырое ' + v.raw : '';
+  else if (age === null) rawText = 'кадров с этим ID ещё не было';
+  else if (age > 2000) rawText = 'последний кадр ' + Math.round(age / 1000) + ' с назад';
+  else rawText = 'поле не помещается в кадр';
+  setText(c.raw, rawText);
+  drawChart(c.cv, c.hist, c.bit, now);
+}
+
+/* Монитор недоступен — не показывать замёрзшие значения как живые. */
+function markWatchDead() {
+  for (const c of W.list) {
+    setText(c.num, 'нет связи');
+    setText(c.raw, '');
+    setCls(c.root, 'wcard stale');
+    c.unit.hidden = true;
+  }
+}
+
+function renderWatchMsg(count) {
+  const m = $('watchMsg');
+  let t = '';
+  if (S.watchErr === 'old') t = 'Монитор старой версии — наблюдение недоступно.';
+  else if (S.watchErr === 'offline') t = 'Нет связи с монитором.';
+  else if (!count) t = 'Claude пока ничего не поставил в наблюдение.';
+  setText(m, t);
+  m.hidden = !t;
+}
+
+function drawChart(cv, hist, bit, now) {
+  const w = cv.clientWidth, h = cv.clientHeight;
+  if (!w || !h) return;
+  const dpr = window.devicePixelRatio || 1;
+  const pw = Math.round(w * dpr), ph = Math.round(h * dpr);
+  if (cv.width !== pw || cv.height !== ph) { cv.width = pw; cv.height = ph; }
+  const g = cv.getContext('2d');
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  g.clearRect(0, 0, w, h);
+  /* сетка по времени: каждые 10 с */
+  g.strokeStyle = '#21262d';
+  g.lineWidth = 1;
+  g.beginPath();
+  for (let s = 10; s < 60; s += 10) {
+    const x = Math.round(w - s / 60 * w) + 0.5;
+    g.moveTo(x, 0);
+    g.lineTo(x, h);
+  }
+  g.stroke();
+
+  let lo = Infinity, hi = -Infinity;
+  for (const p of hist) if (p[1] !== null) { if (p[1] < lo) lo = p[1]; if (p[1] > hi) hi = p[1]; }
+  if (lo === Infinity) return;
+  if (bit) { lo = 0; hi = 1; }
+  let pad = (hi - lo) * 0.12;
+  if (!(pad > 0)) pad = Math.max(Math.abs(hi) * 0.05, 1);
+  const y0 = lo - pad, span = hi + pad - y0;
+  const X = t => w - (now - t) / 60000 * w;
+  const Y = v => h - 3 - (v - y0) / span * (h - 6);
+
+  g.strokeStyle = bit ? '#3fb950' : '#58a6ff';
+  g.lineWidth = 2;
+  g.lineJoin = 'round';
+  g.beginPath();
+  let pen = false, py = 0;
+  for (const p of hist) {
+    if (p[1] === null) { pen = false; continue; }   /* пропуск данных — разрыв линии */
+    const x = X(p[0]), y = Y(p[1]);
+    if (!pen) { g.moveTo(x, y); pen = true; }
+    else { if (bit) g.lineTo(x, py); g.lineTo(x, y); }
+    py = y;
+  }
+  g.stroke();
+}
+
+/* =============================================================================
+ * /data: связь с контроллером и сниффер
+ * ============================================================================= */
+async function pollData() {
+  let j;
+  try {
+    j = await api('/data');
+  } catch (e) {
+    S.dataErr = true;
+    S.live = S.connected = false;
+    S.frSamples = [];
+    renderConn();
+    renderSniff();
+    return;
+  }
+  S.dataErr = false;
+  j = j && typeof j === 'object' ? j : {};
+  const d = j.data && typeof j.data === 'object' ? j.data : {};
+  S.connected = !!j.connected;
+  S.comPort = j.com_port ? String(j.com_port) : '';
+  S.live = S.connected && typeof j.age_ms === 'number' && j.age_ms >= 0 && j.age_ms < 2000;
+  S.sniff = d.sniff && typeof d.sniff === 'object' ? d.sniff : null;
+  S.can = Array.isArray(d.can) ? d.can : [];
+  /* кадров/с — по приросту счётчика сниффера за последние ~5 с */
+  const now = performance.now();
+  if (S.live && S.sniff && typeof S.sniff.frames === 'number') {
+    const a = S.frSamples;
+    if (a.length && S.sniff.frames < a[a.length - 1][1]) a.length = 0;   /* контроллер перезапустился */
+    a.push([now, S.sniff.frames]);
+    while (a.length > 2 && now - a[0][0] > 5000) a.shift();
+  } else {
+    S.frSamples = [];
+  }
+  renderConn();
+  renderSniff();
+  renderRecWarn();
+}
+
+function renderConn() {
+  const c = $('conn');
+  if (S.dataErr) { setText(c, 'монитор не отвечает'); setCls(c, 'bad'); }
+  else if (S.live) { setText(c, 'контроллер на связи' + (S.comPort ? ' · ' + S.comPort : '')); setCls(c, 'ok'); }
+  else if (S.connected) { setText(c, 'порт ' + S.comPort + ' открыт, данных нет'); setCls(c, 'warn'); }
+  else { setText(c, 'контроллер не подключён или спит'); setCls(c, 'bad'); }
+}
+
+function renderSniff() {
+  const nRaw = Number(S.sniff && S.sniff.ch) || S.channels || S.can.length || 1;
+  const n = Math.max(1, Math.min(3, nRaw));
+  const box = $('chans');
+  if (box.children.length !== n) {
+    box.replaceChildren();
+    for (let c = 0; c < n; c++) {
+      const t = el('div', 'chan');
+      t.append(el('div', 'cn', 'CAN' + c), el('div', 'cs', '—'), el('div', 'ci', ''));
+      box.append(t);
+    }
+  }
+  const known = S.live && !!S.sniff;
+  const on = known && Array.isArray(S.sniff.on) ? S.sniff.on : [];
+  let cnt = 0;
+  for (let c = 0; c < n; c++) {
+    const t = box.children[c], isOn = !!on[c];
+    if (isOn) cnt++;
+    setCls(t, 'chan' + (known && isOn ? ' on' : ''));
+    setText(t.children[1], !known ? '—' : isOn ? 'слушает' : 'выключен');
+    setCls(t.children[1], 'cs ' + (known && isOn ? 'ok' : 'dim'));
+    let info = '';
+    const ci = S.can[c];
+    if (S.live && ci && typeof ci === 'object') {
+      info = (ci.mode || '?') + ' ' + (ci.bitrate || '?') + ' кбит/с' + (ci.dbitrate ? ' / ' + ci.dbitrate : '')
+           + (ci.silent ? ' · только приём' : '');
+      const bad = v => v >= 1 && v <= 6;                 /* 0 — ошибок нет, 7 — без изменений */
+      if (isOn && (bad(ci.lec) || bad(ci.dlec)) && ci.rec > 0) info += ' · ошибки приёма: проверьте скорость';
+    }
+    setText(t.children[2], info);
+  }
+
+  let warn = '';
+  if (S.dataErr) warn = 'Нет связи с монитором — состояние сниффера неизвестно.';
+  else if (!S.live) warn = S.connected ? 'От контроллера нет свежих данных — состояние сниффера неизвестно.'
+                                       : 'Контроллер не подключён или спит — состояние сниффера неизвестно.';
+  else if (!S.sniff) warn = 'Прошивка контроллера без сниффера CAN: кадры шины в монитор не придут, записывать будет нечего. '
+                          + 'Прошейте контроллер версией со сниффером (app/can_sniff.c).';
+  setText($('sniffWarn'), warn);
+  $('sniffWarn').hidden = !warn;
+
+  let sum = '', sumCls = 'sniffsum';
+  if (known) {
+    sum = cnt ? 'Слушает ' + cnt + ' из ' + n + (n === 1 ? ' шины' : ' шин') : 'Сниффер выключен — кадры не записываются';
+    sumCls += cnt ? ' ok' : ' warn';
+    const a = S.frSamples;
+    if (cnt && a.length >= 2 && a[a.length - 1][0] > a[0][0]) {
+      const fps = (a[a.length - 1][1] - a[0][1]) * 1000 / (a[a.length - 1][0] - a[0][0]);
+      sum += ' · ≈ ' + fmtInt(fps) + ' кадров/с';
+    }
+    const loss = (Number(S.sniff.drop) || 0) + (Number(S.sniff.lost) || 0);
+    if (loss) sum += ' · потеряно кадров: ' + fmtInt(loss);
+  }
+  setText($('sniffSum'), sum);
+  setCls($('sniffSum'), sumCls);
+
+  const noFw = S.live && !S.sniff;
+  $('bSniffOn').disabled = $('bSniffOff').disabled = S.sniffBusy || S.dataErr || noFw;
+  const armed = sniffOffArmed();
+  setText($('bSniffOff'), armed ? 'Точно выключить? Запись станет пустой' : 'Выключить');
+  setCls($('bSniffOff'), 'btn stop' + (armed ? ' armed' : ''));
+}
+
+const sniffOffArmed = () => S.sniffOffArm && Date.now() - S.sniffOffArm < 3000;
+async function sniffCmd(on) {
+  if (S.sniffBusy) return;
+  /* во время записи выключение — в два касания, как остановка записи: иначе запись молча станет пустой */
+  if (!on && S.session && S.session.active) {
+    if (!sniffOffArmed()) { S.sniffOffArm = Date.now(); renderSniff(); setTimeout(renderSniff, 3100); return; }
+    S.sniffOffArm = 0;
+  }
+  const st = $('sniffStatus');
+  S.sniffBusy = true;
+  renderSniff();
+  try {
+    const r = await api('/cmd', { cmd: 'sniff', ch: -1, on: on ? 1 : 0 });
+    if (r && r.ok) setStatus(st, on ? 'Команда «включить на всех шинах» отправлена' : 'Команда «выключить» отправлена', 'ok', 6000);
+    else setStatus(st, 'Команда не отправлена: контроллер не подключён', 'bad', 8000);
+  } catch (e) {
+    setStatus(st, 'Нет связи с монитором', 'bad', 8000);
+  }
+  setTimeout(() => { S.sniffBusy = false; renderSniff(); }, 800);
+}
+
+/* =============================================================================
+ * Журнал событий
+ * ============================================================================= */
+const WHO = { claude: 'Claude', user: 'Вы', system: 'монитор' };
+function describe(e) {
+  switch (e.type) {
+    case 'session_start': return 'Запись начата: ' + (e.name || baseName(e.dir));
+    case 'session_stop':  return 'Запись остановлена' + (typeof e.frames === 'number' ? ', кадров ' + fmtInt(e.frames) : '');
+    case 'say':           return 'Инструкция: ' + clip(e.text, 200);
+    case 'button':        return 'Кнопка «' + clip(e.label, 60) + '»';
+    case 'input':         return 'Введено: ' + clip(e.value, 80);
+    case 'phase':         return e.label ? 'Фаза: ' + clip(e.label, 60) : 'Фаза закончилась';
+    case 'mark':          return 'Отметка: ' + clip(e.label, 60);
+    case 'note':          return 'Сообщение: ' + clip(e.text, 400);
+    case 'watch':         return 'Наблюдение: ' + (Array.isArray(e.fields) && e.fields.length
+                                 ? e.fields.map(f => (f && f.name) ? String(f.name) : '?').join(', ') : 'список очищен');
+    case 'link':          return clip(e.text || (e.connected ? 'контроллер на связи' : 'связь с контроллером потеряна'), 200);
+    default:              return clip(e.type || 'событие', 60);
+  }
+}
+function renderLog() {
+  if (!S.logDirty) return;
+  S.logDirty = false;
+  const items = [];
+  for (let i = S.events.length - 1; i >= 0; i--) {
+    const e = S.events[i];
+    const by = Object.prototype.hasOwnProperty.call(WHO, e.by) ? e.by : 'system';
+    let cls = 'by-' + by;
+    if ((e.type === 'note' && e.by === 'claude') || (e.type === 'link' && !(e.connected && (!Array.isArray(e.sniff) || e.sniff.some(x => x))))) cls += ' hl';
+    if (e._fresh) cls += ' fresh';
+    e._fresh = false;
+    const li = el('li', cls);
+    li.append(el('span', 'et', hms(e.t)), el('span', 'ew', WHO[by]), el('span', 'ex', describe(e)));
+    items.push(li);
+  }
+  if (!items.length) items.push(el('li', 'empty', S.coach === 'ok' ? 'Событий пока нет' : '—'));
+  $('log').replaceChildren(...items);
+}
+
+/* =============================================================================
+ * Запуск
+ * ============================================================================= */
+$('bSess').addEventListener('click', sessionClick);
+$('sessName').addEventListener('input', renderNameHint);
+$('sessName').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); sessionClick(); } });
+$('bSayValue').addEventListener('click', sendValue);
+$('sayValue').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); sendValue(); } });
+$('bMark').addEventListener('click', sendMark);
+$('markLabel').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); sendMark(); } });
+$('bNote').addEventListener('click', sendNote);
+$('noteText').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); sendNote(); }
+});
+$('bSniffOn').addEventListener('click', () => sniffCmd(1));
+$('bSniffOff').addEventListener('click', () => sniffCmd(0));
+$('bSound').addEventListener('click', soundClick);
+$('soundBar').addEventListener('click', soundBarClick);
+$('bChange').addEventListener('click', changeAnswer);
+for (const ev of ['pointerdown', 'pointerup', 'keydown', 'click']) document.addEventListener(ev, unlockAudio, true);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) document.title = baseTitle; });
+
+renderSound();
+renderSayCard();
+renderSayState();
+renderHeader();
+renderLog();
+renderConn();
+renderSniff();
+renderWatchMsg(0);
+
+loop(pollCoach, 300);
+loop(pollWatch, 250);
+loop(pollData, 1000);
+loop(() => { renderSayState(); renderSession(); renderRecWarn(); }, 1000);   /* «получено N с назад», длительность записи */
+</script>
+</body>
+</html>

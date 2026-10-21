@@ -1,0 +1,1378 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>UC — конфигурация</title>
+<style>
+  :root {
+    --bg: #0e1116; --panel: #161b22; --panel2: #1c2230; --line: #30363d; --line2: #21262d;
+    --fg: #e6edf3; --dim: #8b949e; --dim2: #6e7681; --acc: #58a6ff;
+    --ok: #3fb950; --warn: #d29922; --bad: #f85149; --chg: #d29922;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 13px/1.4 -apple-system, "Segoe UI", system-ui, sans-serif;
+         display: grid; grid-template-columns: 200px 1fr; grid-template-rows: auto 1fr; }
+
+  header { grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; padding: 8px 14px;
+           border-bottom: 1px solid var(--line); background: var(--panel); flex-wrap: wrap; }
+  header h1 { font-size: 15px; margin: 0 8px 0 0; }
+  .pill { padding: 2px 9px; border-radius: 10px; font-size: 11px; background: #21262d; color: var(--dim); white-space: nowrap; }
+  .pill.ok { background: #0f3320; color: var(--ok); } .pill.bad { background: #3a1414; color: var(--bad); }
+  .pill.warn { background: #33280f; color: var(--warn); }
+  header .sp { flex: 1; }
+  button { padding: 5px 12px; background: #21262d; color: var(--fg); border: 1px solid var(--line); border-radius: 6px;
+           cursor: pointer; font: inherit; }
+  button:hover { border-color: var(--dim); }
+  button.primary { background: #1f6f3a; border-color: #2ea043; }
+  button.primary:disabled { background: #21262d; border-color: var(--line); color: var(--dim2); cursor: default; }
+  button.danger { color: var(--bad); border-color: #6e2a28; }
+  button.mini { padding: 1px 7px; font-size: 11px; }
+  #status { font-size: 11px; color: var(--dim); max-width: 520px; }
+  #status.err { color: var(--bad); } #status.ok { color: var(--ok); } #status.warn { color: var(--warn); }
+
+  nav { border-right: 1px solid var(--line); background: var(--panel); padding: 8px 0; overflow-y: auto; }
+  nav a { display: flex; justify-content: space-between; align-items: center; padding: 6px 14px; color: var(--fg);
+          text-decoration: none; border-left: 3px solid transparent; }
+  nav a:hover { background: var(--panel2); }
+  nav a.on { background: var(--panel2); border-left-color: var(--acc); }
+  nav a .n { font-size: 10px; background: var(--chg); color: #000; border-radius: 8px; padding: 0 6px; }
+  nav .grp { color: var(--dim2); font-size: 10px; text-transform: uppercase; letter-spacing: .06em; padding: 10px 14px 2px; }
+
+  main { overflow: auto; padding: 14px 18px 40px; }
+  h2 { font-size: 16px; margin: 0 0 10px; }
+  h3 { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--acc); margin: 18px 0 6px; }
+  .note { font-size: 11px; color: var(--dim2); margin: 2px 0 8px; max-width: 900px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; margin-bottom: 12px; }
+  .row { display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: center; }
+  .f { display: inline-flex; align-items: center; gap: 6px; }
+  .f > label { color: var(--dim); font-size: 11px; }
+  table { border-collapse: collapse; }
+  th, td { padding: 3px 5px; border-bottom: 1px solid var(--line2); text-align: left; white-space: nowrap; }
+  th { color: var(--dim); font-size: 10px; text-transform: uppercase; font-weight: 600; }
+  input, select { background: #0d1117; color: var(--fg); border: 1px solid var(--line); border-radius: 4px; font: inherit; padding: 2px 4px; }
+  input[type=number] { width: 76px; } input.w40 { width: 44px; } input.w56 { width: 56px; } input.w100 { width: 100px; }
+  input.hex { width: 84px; font-family: ui-monospace, Consolas, monospace; } input.name { width: 130px; }
+  input.hexb { width: 24px; padding: 2px 1px; text-align: center; font-family: ui-monospace, Consolas, monospace; }
+  td.cells { white-space: nowrap; line-height: 1.9; } span.bgap { display: inline-block; width: 14px; } tr.sub td { border-top: 0; padding-top: 0; } label.fl2 { white-space: nowrap; margin-right: 6px; }
+  input[type=checkbox] { width: auto; }
+  .chg { border-color: var(--chg) !important; outline: 1px solid var(--chg); }
+  .inv { border-color: var(--bad) !important; outline: 1px solid var(--bad); }
+  .live { font-family: ui-monospace, Consolas, monospace; color: var(--acc); }
+  .t { color: var(--ok); } .fl { color: var(--dim2); }
+  .num { font-family: ui-monospace, Consolas, monospace; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+  .tile { background: var(--panel2); border: 1px solid var(--line2); border-radius: 6px; padding: 8px 10px; }
+  .tile .l { font-size: 10px; color: var(--dim); text-transform: uppercase; } .tile .v { font-size: 16px; font-weight: 600; margin-top: 2px; }
+  .bar { height: 5px; background: #0d1117; border-radius: 3px; overflow: hidden; margin-top: 4px; min-width: 60px; }
+  .bar > i { display: block; height: 100%; background: var(--acc); }
+  .rule { border-left: 3px solid var(--acc); }
+  .term { display: flex; gap: 6px; align-items: center; margin: 3px 0; flex-wrap: wrap; }
+  .join { margin-left: 18px; }
+  .empty { color: var(--dim2); font-style: italic; padding: 6px 0; }
+  .dim { opacity: .45; }
+  .wtxt { color: var(--warn); } .btxt { color: var(--bad); }
+  .tag { font-size: 10px; padding: 0 6px; border-radius: 8px; background: #21262d; color: var(--dim); white-space: nowrap; }
+  .tag.warn { background: #33280f; color: var(--warn); } .tag.bad { background: #3a1414; color: var(--bad); }
+  select:disabled, input:disabled { opacity: .55; cursor: default; }
+</style>
+</head>
+<body>
+<header>
+  <h1 id="brd">UC</h1>
+  <span class="pill" id="conn">…</span>
+  <span class="pill" id="src" title="откуда контроллер взял конфигурацию при старте">—</span>
+  <span class="pill" id="set" hidden title="набор (конфиг из КОНФИГИ), с которым собрана прошивка"></span>
+  <span class="pill bad" id="ovf" hidden title="кадр телеметрии не поместился в буфер (много TX-слотов / длинные поля набора): приходит короткий кадр, живые значения на странице — последние полные">телеметрия: кадр переполнен</span>
+  <span class="sp"></span>
+  <span id="status">загрузка…</span>
+  <button onclick="loadAll()">Прочитать из контроллера</button>
+  <button onclick="undoAll()" title="вернуть значения, прочитанные из контроллера">Отменить правки</button>
+  <button class="primary" id="btnWrite" onclick="writeAll()" disabled>Записать в контроллер</button>
+</header>
+<nav id="nav"></nav>
+<main id="main"></main>
+
+<script>
+/* =====================================================================
+ *  Модель. Контроллер отдаёт плоский JSON: ключ = путь для set
+ *  ("in.0.mode", "can.0.rx.3.id", "rule.2.t.1.op"...). base — как
+ *  прочитано, model — с правками. Всё, что отличается, — «изменения»;
+ *  «Записать» шлёт их по одному set с ожиданием ответа, затем apply.
+ * ===================================================================== */
+/* Лимиты таблиц — из профиля платы, после чтения уточняются по ключам *.on (setLim). */
+let LIM = { CAN_RX: 32, CAN_TXF: 8, CAN_TXS: 16, LIN_FR: 12, LIN_SIG: 24, CAN_TXD: 64 };
+let BR_NOM  = [1000, 500, 250, 125, 100, 50, 33, 20];
+let BR_DATA = [1000, 2000, 4000, 5000, 8000];
+/* Платы: распиновка и особенности. Какая подключена — монитор отвечает на /board
+ * (и первая страница get у H503 несёт "board").
+ *   nCan/nLin/nDac — сколько шин/DAC (от этого SECTS и PAGES);
+ *   grpOf[i] — ведущий канал таймера выхода i (по умолчанию — из groups);
+ *   prot: 'rdp' (G4/H723: RDP, Lock/Unlock по USB) | 'ps' (H503: PRODUCT_STATE, снять только SWD);
+ *   dfu: 'replug' (адрес старта → загрузчик, переподключить USB) | 'jump' (сам перезапускается в DFU);
+ *   code: файл кода выхода в наборе; linModes / linDirs — допустимые режимы LIN и направления кадров. */
+const BOARDS = {
+  H723: {
+    in:  ['PA0','PA1','PA2','PA3','PA6','PA7','PC0','PC1'],
+    out: ['PE9','PE11','PE13','PE14','PC6','PC7','PC8','PC9','PD14','PD15','PB14','PB15'],
+    can: ['PD0/PD1', 'PB5/PB6', 'PD12/PD13'],
+    lin: ['PD5/PD6', 'PD8/PD9'],
+    nCan: 3, nLin: 2, nDac: 2,
+    lim: { CAN_RX: 32, CAN_TXF: 8, CAN_TXS: 16, LIN_FR: 12, LIN_SIG: 24 },
+    prot: 'rdp', dfu: 'replug', code: 'outN.h', linModes: [0, 1, 2], linDirs: [0, 1, 2],
+    groups: { 0: 'OUT0-3 (TIM1)', 4: 'OUT4-7 (TIM3)', 8: 'OUT8-9 (TIM4)', 10: 'OUT10-11 (TIM12)' },
+    freqNote: 'Частота 0 — как в CubeMX.', startFill: false,
+    /* [ключ, имя, пин, может будить] */
+    wake: [['can0','CAN0','RX PD0 · EXTI0',1], ['can1','CAN1','RX PB5',1], ['can2','CAN2','RX PD12',1],
+           ['lin0','LIN0','RX PD6 · EXTI6',1], ['lin1','LIN1','RX PD9',1],
+           ['in0','in0','PA0 · EXTI0',1], ['in1','in1','PA1 · EXTI1',1], ['in2','in2','PA2',1], ['in3','in3','PA3',1],
+           ['in4','in4','PA6 · EXTI6',1], ['in5','in5','PA7',1], ['in6','in6','PC0 · EXTI0',1], ['in7','in7','PC1 · EXTI1',1]],
+    wakeNote: 'из источников на одной линии EXTI (can0/in0/in6, in1/in7, lin0/in4) — один.',
+  },
+  G4: {
+    in:  ['PA0','PA1','PA2','PA3','PC0','PC1','PC2','PC3'],
+    out: ['PE9','PE11','PE13','PE14','PE2','PE3','PE4','PE5','PD14','PD15','PF9','PF10'],
+    can: ['PD0/PD1', 'PB5/PB6', 'PB3/PB4'],
+    lin: ['PD5/PD6', 'PB10/PE15'],
+    nCan: 3, nLin: 2, nDac: 2,
+    lim: { CAN_RX: 32, CAN_TXF: 8, CAN_TXS: 16, LIN_FR: 12, LIN_SIG: 24 },
+    prot: 'rdp', dfu: 'replug', code: 'outN.h', linModes: [0, 1, 2], linDirs: [0, 1, 2],
+    groups: { 0: 'OUT0-3 (TIM1)', 4: 'OUT4-7 (TIM3)', 8: 'OUT8-9 (TIM4)', 10: 'OUT10-11 (TIM15)' },
+    freqNote: 'Частота 50..200000 Гц; «старт» — скважность сразу после включения.', startFill: true,
+    wake: [['can0','CAN0','RX PD0 · EXTI0',1], ['can1','CAN1','RX PB5',1], ['can2','CAN2','RX PB3 · EXTI3',1],
+           ['lin0','LIN0','RX PD6',1], ['lin1','LIN1','RX PE15',1],
+           ['in0','in0','PA0 · EXTI0',1], ['in1','in1','PA1',1], ['in2','in2','PA2',1], ['in3','in3','PA3 · EXTI3',1],
+           ['in4','in4','PC0',0], ['in5','in5','PC1',0], ['in6','in6','PC2',0], ['in7','in7','PC3',0]],
+    wakeNote: 'будить могут только in0..in3; из источников на одной линии EXTI (can0/in0, can2/in3) — один.',
+  },
+  H503: {
+    in:  ['PA0','PA1','PA2','PA3','PA4','PA5','PA6','PA7'],
+    out: ['PA8','PA9','PA10','PB6','PB3','PB4','PB5','PA15'],
+    can: ['PB12/PB13'],
+    lin: ['PB7/PB8'],
+    nCan: 1, nLin: 1, nDac: 0,
+    lim: { CAN_RX: 24, CAN_TXF: 4, CAN_TXS: 8, LIN_FR: 8, LIN_SIG: 16 },
+    brNom: [1000, 500, 250, 125], brData: [1000, 2000, 2500, 5000],
+    prot: 'ps', dfu: 'jump', code: 'chN.h', linModes: [0, 1], linDirs: [2],
+    roKeys: ['divider'],                 /* в прошивке F_RO: делит код набора, из приложения не меняется */
+    syncFreq: true, filterSum: 128,
+    groups: { 0: 'OUT0-2 (TIM1)', 3: 'OUT3,5,6 (TIM3)', 4: 'OUT4,7 (TIM2)' },
+    grpOf: [0, 0, 0, 3, 4, 3, 3, 4],
+    freqNote: 'Частота 1..250000 Гц — одна на таймер: задаётся у ведущего канала группы, остальным каналам группы ставится та же. '
+            + '«Старт» — скважность сразу после включения. Мин/макс и плавность действуют только в режиме «код».',
+    startFill: true,
+    wake: [['can0','CAN0','RX PB12 · EXTI12',1], ['lin0','LIN0','RX PB8 · EXTI8',1],
+           ['in0','in0','PA0 · EXTI0',1], ['in1','in1','PA1 · EXTI1',1], ['in2','in2','PA2 · EXTI2',1], ['in3','in3','PA3 · EXTI3',1],
+           ['in4','in4','PA4 · EXTI4',1], ['in5','in5','PA5 · EXTI5',1], ['in6','in6','PA6 · EXTI6',1], ['in7','in7','PA7 · EXTI7',1]],
+    wakeNote: 'у каждого источника своя линия EXTI — сочетать можно любые.',
+    /* узлы-эмуляторы LIN (lin.0.node.*): [подпись, пояснение] */
+    nodes: { guba: ['губа', 'ГУБА: команда 0x25 → статус 0x26'], grill1: ['шторка 1', 'ГРИЛЬ 1: 0x1E → 0x20'],
+             grill2: ['шторка 2', 'ГРИЛЬ 2: 0x0C → 0x34'] },
+  },
+};
+let BRD = 'H723', B = BOARDS.H723;
+let IN_PINS = B.in, OUT_PINS = B.out, CAN_PINS = B.can, LIN_PINS = B.lin;
+let SECTS = buildSects(), PAGES = buildPages();
+function setBoard(name, hw) {
+  BRD = BOARDS[name] ? name : 'H723'; B = BOARDS[BRD];
+  IN_PINS = B.in; OUT_PINS = B.out; CAN_PINS = B.can; LIN_PINS = B.lin;
+  if (!B.grpOf) {                          /* ведущий канал = ближайший ключ groups слева */
+    B.grpOf = OUT_PINS.map((_, i) => Math.max(...Object.keys(B.groups).map(Number).filter(g => g <= i)));
+  }
+  LIM = Object.assign({}, B.lim);
+  if (!LIM.CAN_TXD) LIM.CAN_TXD = BRD === 'H503' ? 8 : 64;   /* байтов кадра передачи в конфиге (can.N.txf.K.data) */
+  BR_NOM = B.brNom || [1000, 500, 250, 125, 100, 50, 33, 20];
+  /* скорости данных FD — из /board.dbr монитора (массив или "1000,2000,…"), иначе из профиля */
+  const dbr = hw && hw.dbr !== undefined ? String(hw.dbr).split(',').map(Number).filter(x => x > 0) : [];
+  BR_DATA = dbr.length ? dbr : (B.brData || [1000, 2000, 4000, 5000, 8000]);
+  SECTS = buildSects(); PAGES = buildPages();
+  document.title = 'UC ' + BRD + ' — конфигурация';
+  document.getElementById('brd').textContent = 'UC ' + BRD;
+}
+/* Секции get: основные настройки + таблицы по отдельности (буфер ответа
+ * у G4 — 14 КБ, самая большая секция can.N.rx. — ~10 КБ; у H503 ответ
+ * постраничный, см. getSect). Правила — по одному выходу: с настройками
+ * входов (rule.N.t.K.*) вся секция rule. у G4 уже не влезает (~20 КБ). */
+function buildSects() {
+  const s = [''];
+  for (let c = 0; c < B.nCan; c++) s.push(`can.${c}.rx.`, `can.${c}.txf.`, `can.${c}.txt.`, `can.${c}.txe.`);   /* can.N.txs. (сигналы передачи) больше не читаем */
+  for (let l = 0; l < B.nLin; l++) s.push(`lin.${l}.fr.`, `lin.${l}.sig.`);
+  for (let o = 0; o < (B.out || []).length; o++) s.push(`rule.${o}.`);
+  return s;
+}
+/* Лимиты таблиц по факту: сколько строк отдал контроллер (ключи *.on канала 0). */
+function setLim(base) {
+  const cnt = re => Object.keys(base).filter(k => re.test(k)).length;
+  const L = { CAN_RX: cnt(/^can\.0\.rx\.\d+\.on$/), CAN_TXF: cnt(/^can\.0\.txf\.\d+\.on$/), CAN_TXS: cnt(/^can\.0\.txs\.\d+\.on$/),
+              LIN_FR: cnt(/^lin\.0\.fr\.\d+\.on$/), LIN_SIG: cnt(/^lin\.0\.sig\.\d+\.on$/) };
+  for (const k in L) LIM[k] = L[k] || B.lim[k];
+}
+const SRC_NAMES = { flash: 'конфиг из Flash', defaults: 'Flash пуст — дефолты прошивки',
+                    defaults_changed: 'дефолты прошивки сменились — старый конфиг отброшен',
+                    safe_defaults: 'сбои при старте подряд — загружены дефолты, Flash не читался',
+                    noflash: 'журнал Flash недоступен — только дефолты',
+                    flash_invalid: 'конфиг во Flash не принят этой прошивкой — дефолты' };
+/* Сведения только для чтения с первой страницы get (H503): в правки не попадают. */
+const INFO_RE = /^(board|set|seq|code_mask|code_lock|can\.\d\.rx_code|lin\.\d\.sig_code|out\.\d+\.code)$/;
+
+const S = { base: {}, model: {}, info: {}, data: null, ovf: false, loaded: false, sect: 'overview', busy: false };
+
+/* ---- транспорт ---- */
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+async function sendCmd(obj) { return (await fetch('/cmd', { method: 'POST', body: JSON.stringify(obj) })).json(); }
+/* since — номер кадра cfg: монитор с кольцом кадров добавит "cfgs" (все cfg после него), старый — нет */
+async function cfgState(since) { return (await fetch(since === undefined ? '/cfg' : '/cfg?since=' + since)).json(); }
+async function cmdResp(obj, ms) {
+  const before = (await cfgState()).resp_seq;
+  const r = await sendCmd(obj);
+  if (!r.ok) return { resp: 'err', msg: 'контроллер не подключён' };
+  for (let t = 0; t < (ms || 2000); t += 40) {
+    const st = await cfgState();
+    if (st.resp_seq !== before) return st.resp;
+    await sleep(40);
+  }
+  return { resp: 'err', msg: 'нет ответа', timeout: 1 };
+}
+/* Одна страница get. G4/H723 отдают секцию целиком (нет "next"); H503 —
+ * постранично: from — с какого поля, в ответе next (0 — секция кончилась). */
+async function getPage(sect, from) {
+  const before = (await cfgState()).cfg_seq;
+  const cmd = { cmd: 'get' };
+  if (sect) cmd.sect = sect;
+  if (from) cmd.from = from;
+  const r = await sendCmd(cmd);
+  if (!r.ok) throw new Error('контроллер не подключён');
+  for (let i = 0; i < 40; i++) {
+    await sleep(80);
+    const st = await cfgState(before);
+    /* все кадры cfg после запроса ("cfgs"): страница не теряется, даже если за ней сразу пришёл
+     * другой кадр cfg; монитор без кольца отдаёт только последний кадр */
+    const got = Array.isArray(st.cfgs) ? st.cfgs.map(x => x.cfg) : (st.cfg_seq !== before ? [st.cfg] : []);
+    const c = got.reverse().find(c => c && (c.sect || '') === sect && Number(c.from || 0) === from);
+    if (c) return c;
+  }
+  throw new Error('контроллер не ответил на get ' + (sect || 'основное') + (from ? ' с ' + from : ''));
+}
+async function getSect(sect, onPage) {
+  const out = {};
+  let from = 0;
+  for (let n = 0; n < 100; n++) {
+    let c = null, err = null;
+    for (let a = 0; a < 3 && !c; a++) {                 /* USB мог переподключиться — повторяем */
+      try { c = await getPage(sect, from); } catch (e) { err = e; await sleep(700); }
+    }
+    if (!c) throw err;
+    Object.assign(out, c);
+    const next = Number(c.next || 0);
+    if (!next) break;
+    if (next <= from) throw new Error('get ' + (sect || 'основное') + ': страницы не продвигаются (next ' + next + ')');
+    from = next;
+    if (onPage) onPage(n + 2);
+  }
+  delete out.from; delete out.next;
+  return out;
+}
+
+function status(t, cls) { const e = document.getElementById('status'); e.textContent = t; e.className = cls || ''; }
+
+async function loadAll(force) {
+  if (S.busy) return;
+  if (!force && changes().length && !confirm('Есть незаписанные правки — прочитать заново и потерять их?')) return;
+  S.busy = true;
+  try {
+    const base = {}, info = {}, skipped = [];
+    for (let i = 0; i < SECTS.length; i++) {
+      const sect = SECTS[i];
+      status(`чтение ${i + 1}/${SECTS.length}…`);
+      let c;
+      try { c = await getSect(sect, p => status(`чтение ${i + 1}/${SECTS.length}, стр. ${p}…`)); }
+      catch (e) {
+        /* условия запуска кадров (txt/txe) есть не во всех прошивках — без них страница работает; остальное — обязательно */
+        if (!/\.(txt|txe)\.$/.test(sect)) throw e;
+        console.warn('секция ' + sect + ' не прочитана: ' + e.message); skipped.push(sect); continue;
+      }
+      for (const k in c) {
+        if (['version', 'src', 'sect'].includes(k)) continue;
+        if (!sect && INFO_RE.test(k)) info[k] = c[k]; else base[k] = c[k];
+      }
+      if (!sect) {
+        const p = document.getElementById('src'); p.textContent = SRC_NAMES[c.src] || c.src;
+        p.className = 'pill' + (c.src === 'flash' ? ' ok' : ' warn');
+        p.title = 'откуда контроллер взял конфигурацию при старте' + (info.seq !== undefined ? ` · запись № ${info.seq}` : '');
+        /* плата сама назвала себя (H503) — если /board не ответил или ответил иначе, перестроить разделы */
+        if (info.board && BOARDS[info.board] && info.board !== BRD) { setBoard(info.board, S.hw); renderNav(); }
+      }
+    }
+    S.base = base; S.model = Object.assign({}, base); S.info = info; S.loaded = true;
+    setLim(base);
+    HAS_DRL = 'drl.off' in base; PAGES = buildPages();     /* раздел «ДХО» — только если ключ есть */
+    const ps = document.getElementById('set');
+    ps.hidden = info.set === undefined; ps.textContent = 'набор: ' + (info.set || '—');
+    status(skipped.length ? 'прочитано из контроллера, без ответа секции: ' + skipped.join(' ') + ' (старая прошивка?)' : 'прочитано из контроллера', skipped.length ? 'warn' : 'ok');
+  } catch (e) { status(e.message, 'err'); }
+  S.busy = false;
+  if (!PAGES.some(p => p.id === S.sect)) S.sect = 'overview';
+  render();
+}
+
+/* ---- изменения ---- */
+const ROW_RE = /^((?:can\.\d\.(?:rx|txf|txs)|lin\.\d\.(?:fr|sig))\.\d+)\./;
+function rowOn(m, key) { const r = ROW_RE.exec(key); return r ? m[r[1] + '.on'] : 1; }
+function changes() {
+  const out = [];
+  for (const k in S.model) {
+    if (S.model[k] === S.base[k]) continue;
+    const r = ROW_RE.exec(k);
+    if (r && !k.endsWith('.on') && !S.model[r[1] + '.on']) continue;      /* строка удалена / не занята */
+    out.push([k, S.model[k]]);
+  }
+  /* порядок: сначала снятые строки, потом поля, в конце включённые строки */
+  const w = ([k, v]) => k.endsWith('.on') && ROW_RE.test(k) ? (v ? 2 : 0) : 1;
+  return out.sort((a, b) => w(a) - w(b));
+}
+function changesIn(prefixes) { return changes().filter(([k]) => prefixes.some(p => k.startsWith(p))).length; }
+
+async function writeAll() {
+  const ch = changes();
+  if (!ch.length || S.busy) return;
+  S.busy = true; updateCounts();
+  try {
+    for (let i = 0; i < ch.length; i++) {
+      const [path, v] = ch[i];
+      status(`запись ${i + 1}/${ch.length}: ${path}`);
+      const cmd = typeof v === 'string' ? { cmd: 'set', path, str: v } : { cmd: 'set', path, val: v };
+      let r = await cmdResp(cmd);
+      /* set идемпотентен: ответ мог потеряться (USB занят сниффером / переподключился) — повторить до 2 раз */
+      for (let a = 0; a < 2 && r.resp !== 'ok' && (r.timeout || r.msg === 'контроллер не подключён'); a++) {
+        status(`запись ${i + 1}/${ch.length}: ${path} — нет ответа, повтор ${a + 1}…`);
+        await sleep(r.timeout ? 200 : 700);
+        r = await cmdResp(cmd);
+        if (r.resp === 'ok') await sleep(300);          /* запоздалый второй ответ не должен достаться следующему set */
+      }
+      if (r.resp !== 'ok') {
+        await cmdResp({ cmd: 'discard' });
+        status(`ошибка: ${r.msg || JSON.stringify(r)} — в контроллер ничего не записано, правки остались здесь`, 'err');
+        S.busy = false; updateCounts(); return;
+      }
+    }
+    status('проверка и сохранение…');
+    const r = await cmdResp({ cmd: 'apply' }, 5000);         /* стирание сектора Flash — до ~2 с */
+    if (r.resp !== 'ok' && r.applied) {
+      /* применено в RAM, но во Flash не легло: после сброса вернётся старое */
+      S.busy = false;
+      await loadAll(true);
+      status(`применено, но НЕ сохранено во Flash: ${r.msg || JSON.stringify(r)} — после перезагрузки вернётся прежний конфиг`
+             + (r.warn ? ` · ⚠ ${r.warn}` : ''), 'err');
+      return;
+    }
+    if (r.resp !== 'ok') {
+      await cmdResp({ cmd: 'discard' });
+      status(`контроллер отклонил: ${r.msg || JSON.stringify(r)} — ничего не записано, правки остались здесь`, 'err');
+      S.busy = false; updateCounts(); return;
+    }
+    S.busy = false;
+    await loadAll(true);
+    if (r.warn) status(`записано и сохранено: ${ch.length} изм. · ⚠ ${r.warn}`, 'warn');
+    else status(`записано и сохранено: ${ch.length} изм.`, 'ok');
+  } catch (e) { status(e.message, 'err'); S.busy = false; updateCounts(); }
+}
+function undoAll() { S.model = Object.assign({}, S.base); render(); status('правки отменены'); }
+
+/* ---- поля ввода: data-path + data-k (вид) ---- */
+function v(p) { return S.model[p]; }
+function has(p) { return p in S.base; }                  /* ключ есть у этой платы/прошивки */
+function cls(p) { return S.model[p] !== S.base[p] ? ' chg' : ''; }
+function num(p, c, attrs)  { return `<input type="number" data-path="${p}" data-k="num" class="${c || ''}${cls(p)}" value="${v(p) ?? ''}" ${attrs || ''}>`; }
+function flt(p, c)         { return `<input type="number" step="any" data-path="${p}" data-k="num" class="${c || 'w56'}${cls(p)}" value="${v(p) ?? ''}">`; }
+function pct(p)            { return `<input type="number" step="0.1" min="0" max="100" data-path="${p}" data-k="pct" class="w56${cls(p)}" value="${v(p) === undefined ? '' : v(p) / 10}">`; }
+function hex(p)            { return `<input type="text" data-path="${p}" data-k="hex" class="hex${cls(p)}" value="${v(p) === undefined ? '' : '0x' + Number(v(p)).toString(16).toUpperCase()}">`; }
+function txt(p)            { return `<input type="text" data-path="${p}" data-k="txt" class="name${cls(p)}" value="${esc(v(p) ?? '')}">`; }
+function nchk(p, attrs) { return `<input type="checkbox" data-path="${p}" data-k="nchk" class="${cls(p)}" ${v(p) ? '' : 'checked'} ${attrs || ''}>`; }
+function chk(p, re, attrs) { return `<input type="checkbox" data-path="${p}" data-k="chk" class="${cls(p)}" ${v(p) ? 'checked' : ''} ${re ? 'data-re="1"' : ''} ${attrs || ''}>`; }
+function sel(p, opts, re, attrs) {
+  return `<select data-path="${p}" data-k="num" class="${cls(p)}" ${re ? 'data-re="1"' : ''} ${attrs || ''}>` +
+    opts.map(o => `<option value="${o[0]}" ${Number(o[0]) === Number(v(p)) ? 'selected' : ''}>${esc(o[1])}</option>`).join('') + '</select>';
+}
+function fld(label, html, title) { return `<span class="f"${title ? ` title="${esc(title)}"` : ''}><label>${label}</label>${html}</span>`; }
+function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+const OPTS = a => a.map(x => [x, x]);
+/* список скоростей + текущее значение, если его в списке нет (чтобы select его не подменял) */
+const OPTS_CUR = (a, cur) => OPTS(cur === undefined || a.includes(Number(cur)) ? a : a.concat(Number(cur)));
+
+function readField(el) {
+  const k = el.dataset.k, s = el.value.trim();
+  if (k === 'chk') return el.checked ? 1 : 0;
+  if (k === 'nchk') return el.checked ? 0 : 1;
+  if (k === 'txt') {
+    if (/["\\\u0000-\u001f]/.test(s) || new TextEncoder().encode(s).length > 23) return undefined;
+    return s;
+  }
+  if (k === 'hex') { if (!/^(0x)?[0-9a-f]+$/i.test(s)) return undefined; return parseInt(s.replace(/^0x/i, ''), 16); }
+  if (k === 'byte') {                                   /* ячейка байта кадра передачи -> строка hex всего кадра */
+    if (!/^[0-9a-f]{1,2}$/i.test(s)) return undefined;
+    const j = +el.dataset.i, cur = hexPad(v(el.dataset.path), LIM.CAN_TXD);
+    return hexNorm(cur.slice(0, j * 2) + s.toUpperCase().padStart(2, '0') + cur.slice(j * 2 + 2));
+  }
+  if (s === '') return undefined;
+  const n = Number(s);
+  if (!Number.isFinite(n)) return undefined;
+  return k === 'pct' ? Math.round(n * 10) : n;
+}
+
+document.addEventListener('change', e => {
+  const el = e.target;
+  if (!el.dataset || !el.dataset.path) return;
+  const val = readField(el);
+  el.classList.toggle('inv', val === undefined);
+  if (val === undefined) return;
+  if (el.dataset.k === 'byte') el.value = el.value.trim().toUpperCase().padStart(2, '0');
+  S.model[el.dataset.path] = val;
+  el.classList.toggle('chg', val !== S.base[el.dataset.path]);
+  /* H503: частота — свойство таймера, у включённых каналов группы должна совпадать */
+  const fm = /^out\.(\d+)\.pwm_freq_hz$/.exec(el.dataset.path);
+  if (fm && B.syncFreq) B.grpOf.forEach((g, j) => { if (g === +fm[1] && j !== g && has(`out.${j}.pwm_freq_hz`)) S.model[`out.${j}.pwm_freq_hz`] = val; });
+  if (el.dataset.re) render(); else updateCounts();
+});
+
+/* ---- строки таблиц ---- */
+function rowsUsed(prefix, n) { const r = []; for (let i = 0; i < n; i++) if (v(`${prefix}.${i}.on`)) r.push(i); return r; }
+function addRow(prefix, n, defs) {
+  for (let i = 0; i < n; i++) {
+    if (v(`${prefix}.${i}.on`)) continue;
+    for (const k in defs) S.model[`${prefix}.${i}.${k}`] = defs[k];
+    S.model[`${prefix}.${i}.on`] = 1;
+    render(); return;
+  }
+  alert('Свободных строк нет (максимум ' + n + ').');
+}
+function delRow(prefix, i) {
+  if (codeRow(prefix, i)) { alert('Эту строку читает код набора — удалить её нельзя (править ID, байт, бит, множитель можно).'); return; }
+  S.model[`${prefix}.${i}.on`] = 0; render();
+}
+/* Строка таблицы, которую читает скомпилированный код набора (H503: can.0.rx_code / lin.0.sig_code) */
+function codeRow(prefix, i) {
+  const m = /^(can|lin)\.(\d)\.(rx|sig)$/.exec(prefix);
+  if (!m) return false;
+  const mask = S.info[`${m[1]}.${m[2]}.${m[3]}_code`];
+  return mask !== undefined && ((Number(mask) >>> i) & 1) === 1;
+}
+function delBtn(prefix, i) {
+  return codeRow(prefix, i)
+    ? '<span class="tag" title="строку читает код набора: удалить/выключить нельзя, править поля можно">код набора</span>'
+    : `<button class="mini danger" onclick="delRow('${prefix}',${i})">удалить</button>`;
+}
+
+/* ---- справочники источников ---- */
+const SRC_OPTS_TX   = [[0, 'константа'], [1, 'вход'], [2, 'выход'], [3, 'custom-слот'], [4, 'сигнал CAN'], [5, 'сигнал LIN']];
+const SRC_OPTS_RULE = [[0, '—'], [1, 'вход'], [2, 'выход'], [4, 'сигнал CAN'], [5, 'сигнал LIN']];
+function sigName(kind, ch, i) {
+  const p = kind === 4 ? `can.${ch}.rx.${i}` : `lin.${ch}.sig.${i}`;
+  if (!v(p + '.on')) return `#${i} (не задан)`;
+  const nm = v(p + '.name') || '';
+  return kind === 4 ? `#${i} ${nm} · 0x${Number(v(p + '.id')).toString(16).toUpperCase()}` : `#${i} ${nm}`;
+}
+/* селекты «канал» и «что именно» для источника src */
+function srcPick(pSrc, pCh, pIdx) {
+  const s = Number(v(pSrc) || 0);
+  if (s === 1) return sel(pIdx, IN_PINS.map((p, i) => [i, `in${i} ${p}`]));
+  if (s === 2) return sel(pIdx, OUT_PINS.map((p, i) => [i, `out${i}`]));
+  if (s === 3) return num(pIdx, 'w40', 'min="0" max="15"');
+  if (s === 4 || s === 5) {
+    const nch = s === 4 ? B.nCan : B.nLin, nsig = s === 4 ? LIM.CAN_RX : LIM.LIN_SIG;
+    const ch = Number(v(pCh) || 0);
+    const used = [];
+    for (let i = 0; i < nsig; i++) if (v(`${s === 4 ? 'can' : 'lin'}.${ch}.${s === 4 ? 'rx' : 'sig'}.${i}.on`) || i === Number(v(pIdx))) used.push(i);
+    return sel(pCh, [...Array(nch).keys()].map(c => [c, (s === 4 ? 'CAN' : 'LIN') + c]), true) +
+           sel(pIdx, used.map(i => [i, sigName(s, ch, i)]));
+  }
+  return '';
+}
+function liveSrc(s, ch, idx) {
+  const d = S.data; if (!d) return undefined;
+  s = Number(s);
+  if (s === 1) return d.in && d.in[idx] ? d.in[idx].value : undefined;
+  if (s === 2) return d.out && d.out[idx] ? d.out[idx].fill : undefined;
+  if (s === 4) return d.sig && d.sig.can && d.sig.can[ch] ? d.sig.can[ch][idx] : undefined;
+  if (s === 5) return d.sig && d.sig.lin && d.sig.lin[ch] ? d.sig.lin[ch][idx] : undefined;
+  return undefined;
+}
+
+/* =====================================================================
+ *  Разделы
+ * ===================================================================== */
+var HAS_DRL = false;          /* var: читается в buildPages() ещё до объявления S */
+function buildPages() {
+  const p = [
+    { id: 'overview', t: 'Обзор',                pf: [] },
+    { g: 'Входы / выходы' },
+    { id: 'inputs',   t: 'Входы',                pf: ['in.', 'divider'] },
+    { id: 'outputs',  t: 'Выходы и правила',     pf: ['out.', 'rule.', 'ign.'] },
+  ];
+  if (B.nDac) p.push({ id: 'dac', t: 'DAC', pf: ['dac.'] });
+  p.push({ g: 'Шины' });
+  for (let c = 0; c < B.nCan; c++) p.push({ id: 'can' + c, t: 'CAN' + c, pf: [`can.${c}.`] });
+  for (let l = 0; l < B.nLin; l++) p.push({ id: 'lin' + l, t: 'LIN' + l, pf: [`lin.${l}.`] });
+  if (HAS_DRL)                                      /* плагин «поворотники как ДХО» (G4, drl_ctrl.c) */
+    p.push({ g: 'Функции' }, { id: 'drl', t: 'ДХО', pf: ['drl.'] });
+  p.push({ g: 'Система' },
+    { id: 'sleep',    t: 'Сон',                  pf: ['stop.', 'ign.'] },
+    { id: 'diag',     t: 'Диагностика',          pf: ['diag.'] },
+    { id: 'protect',  t: 'Защита прошивки',      pf: [] },
+    { id: 'tools',    t: 'Инструменты',          pf: [] });
+  return p;
+}
+
+function renderNav() {
+  document.getElementById('nav').innerHTML = PAGES.map(p => p.g ? `<div class="grp">${p.g}</div>` :
+    `<a href="#${p.id}" class="${S.sect === p.id ? 'on' : ''}" onclick="go('${p.id}');return false">${p.t}` +
+    `<span class="n" id="n_${p.id}" ${p.pf.length && changesIn(p.pf) ? '' : 'hidden'}>${p.pf.length ? changesIn(p.pf) : ''}</span></a>`).join('');
+}
+function updateCounts() {
+  for (const p of PAGES) {
+    if (!p.id) continue;
+    const e = document.getElementById('n_' + p.id); if (!e) continue;
+    const n = p.pf.length ? changesIn(p.pf) : 0;
+    e.hidden = !n; e.textContent = n;
+  }
+  const n = changes().length, b = document.getElementById('btnWrite');
+  b.disabled = !n || S.busy; b.textContent = n ? `Записать в контроллер (${n})` : 'Записать в контроллер';
+}
+function go(id) {
+  S.sect = id;
+  try { history.replaceState(null, '', '#' + id); } catch (e) {}
+  render(); document.getElementById('main').scrollTop = 0;
+}
+
+function render() {
+  renderNav();
+  const m = document.getElementById('main');
+  const top = m.scrollTop;
+  if (!S.loaded && !['overview', 'protect', 'tools'].includes(S.sect)) {
+    m.innerHTML = `<h2>${(PAGES.find(p => p.id === S.sect) || {}).t || ''}</h2><div class="empty">Конфигурация ещё не прочитана — «Прочитать из контроллера».</div>`;
+  } else {
+    m.innerHTML = (VIEWS[S.sect] || VIEWS.overview)();
+  }
+  m.scrollTop = top;
+  updateCounts(); live();
+  if (S.sect === 'tools') flashRefresh(true);
+}
+
+const VIEWS = {};
+
+VIEWS.overview = () => {
+  let h = '<h2>Обзор</h2><div class="tiles">';
+  const t = (l, id) => `<div class="tile"><div class="l">${l}</div><div class="v" id="${id}">—</div></div>`;
+  h += t('связь', 'ov_conn') + t('работает', 'ov_up') + t('режим', 'ov_mode') + t('засыпаний', 'ov_slp');
+  if (B.prot === 'ps') h += t('разбудил', 'ov_wake') + t('причина сброса', 'ov_rst');
+  else h += t('сбросов сторожем', 'ov_iwdg');
+  h += t('защита', 'ov_rdp');
+  if (S.info.set !== undefined) h += t('набор', 'ov_set');
+  h += '</div>';
+  /* объекты набора из телеметрии (fan/fuel/roller…) — заполняет live() */
+  h += '<div id="ov_appw" hidden><h3>Состояние набора</h3><div class="tiles" id="ov_app"></div></div>';
+  h += '<h3>Входы</h3><div class="tiles">' + IN_PINS.map((p, i) => t(`in${i} ${p}`, `ov_in${i}`)).join('') + '</div>';
+  h += '<h3>Выходы</h3><div class="tiles">' + OUT_PINS.map((p, i) =>
+    `<div class="tile"><div class="l">out${i} ${p} <span id="ov_om${i}"></span></div><div class="v" id="ov_out${i}">—</div><div class="bar"><i id="ov_ob${i}" style="width:0"></i></div></div>`).join('') + '</div>';
+  h += '<h3>Шины</h3><div class="tiles">' + CAN_PINS.map((_, i) => t('CAN' + i, 'ov_can' + i)).join('') + LIN_PINS.map((_, i) => t('LIN' + i, 'ov_lin' + i)).join('') + '</div>';
+  if (!S.loaded) h += '<p class="note">Конфигурация не прочитана — «Прочитать из контроллера».</p>';
+  return h;
+};
+
+VIEWS.inputs = () => {
+  const ro = (B.roKeys || []).includes('divider');
+  let h = '<h2>Входы</h2><div class="card"><div class="row">' + fld('делитель (R1+R2)/R2', ro
+    ? `<span class="num" title="задан в прошивке (код набора делит на него) — из приложения не меняется">${esc(v('divider') ?? '—')}</span> <span class="fl">только чтение</span>`
+    : num('divider', 'w100', 'step="0.001"')) + '</div>';
+  const pull = has('in.0.pull');
+  h += '<table><tr><th>#</th><th>пин</th><th>сейчас</th><th>режим</th><th>инв.</th>' + (pull ? '<th>подтяжка</th>' : '')
+     + '<th>фильтр</th><th>порог мВ</th><th>гист. мВ</th><th>шум мВ</th></tr>';
+  for (let i = 0; i < IN_PINS.length; i++)
+    h += `<tr><td>in${i}</td><td class="num">${IN_PINS[i]}</td><td class="live" id="lv_in${i}">—</td>
+      <td>${sel(`in.${i}.mode`, [[0, 'выкл'], [1, 'аналог, мВ'], [2, 'цифровой 0/1']], !!B.filterSum)}</td><td>${chk(`in.${i}.invert`)}</td>
+      ${pull ? `<td>${sel(`in.${i}.pull`, [[0, 'нет'], [1, 'вверх'], [2, 'вниз']])}</td>` : ''}
+      <td>${num(`in.${i}.filter_samples`, 'w56', `min="1" max="64"${B.filterSum ? ' data-re="1"' : ''}`)}</td><td>${num(`in.${i}.threshold_mv`)}</td>
+      <td>${num(`in.${i}.hysteresis_mv`)}</td><td>${num(`in.${i}.noise_mv`)}</td></tr>`;
+  h += '</table><p class="note">Цифровой: 1, когда напряжение выше порога + гистерезис/2, 0 — ниже порога − гистерезис/2. Шум: всё ниже — 0.</p>';
+  if (B.filterSum) {
+    let sum = 0;
+    for (let i = 0; i < IN_PINS.length; i++) if (Number(v(`in.${i}.mode`) || 0)) sum += Number(v(`in.${i}.filter_samples`) || 0);
+    h += `<p class="note${sum > B.filterSum ? ' btxt' : ''}">Фильтр — отсчётов на усреднение (1..64); сумма у включённых входов сейчас ${sum} из ${B.filterSum} (общий пул).`
+       + ' Если код набора читает вход в определённом режиме, другой режим контроллер отклонит при записи.</p>';
+  }
+  return h + '</div>';
+};
+
+const OP_OPTS = [[0, '>'], [1, '<'], [2, '='], [3, '≠'], [4, '≥'], [5, '≤']];
+VIEWS.outputs = () => {
+  let h = '<h2>Выходы и правила</h2>';
+  /* H503: en, fill_min/max, ramp_ms, код набора (code_mask/code_lock/out.N.code) — только когда ключи есть */
+  const hasEn = has('out.0.en'), hasLim = has('out.0.fill_min'), hasRamp = has('out.0.ramp_ms');
+  const hasStart = B.startFill || has('out.0.start_fill');
+  const cmask = S.info.code_mask, clock = Number(S.info.code_lock || 0), hasCode = cmask !== undefined;
+  h += '<div class="card"><table><tr><th>#</th><th>пин</th><th>сейчас</th><th>управление</th>' + (hasEn ? '<th>вкл</th>' : '') + '<th>инверсия</th>'
+     + (hasStart ? '<th>старт, %</th>' : '') + (hasLim ? '<th>мин, %</th><th>макс, %</th>' : '') + (hasRamp ? '<th>плавность, мс</th>' : '')
+     + '<th>ШИМ, Гц (таймер)</th>' + (hasCode ? '<th>код набора</th>' : '') + '</tr>';
+  let noCode = [];
+  for (let i = 0; i < OUT_PINS.length; i++) {
+    const lead = B.groups[i] !== undefined;
+    const rule = Number(v(`rule.${i}.mode`) || 0) === 1, locked = (clock >> i) & 1, en = hasEn ? Number(v(`out.${i}.en`) || 0) : 1;
+    const codeHere = hasCode ? ((Number(cmask) >> i) & 1) === 1 : true;
+    /* замок code_lock: режим «код» и «вкл» не снять (если уже неверно — дать исправить) */
+    const LOCK = 'disabled title="выходом управляет только код набора (code_lock)"';
+    const lockMode = locked && !rule ? LOCK : '', lockEn = locked && en ? LOCK : '';
+    const dimCode = rule ? ' class="dim" title="в режиме правила не действует — у правила свои вкл/выкл % и плавность"' : '';
+    const codeTxt = S.info[`out.${i}.code`];
+    let codeCell = '';
+    if (hasCode) {
+      codeCell = codeHere ? `<span class="fl">${esc(codeTxt || 'есть')}</span>` : '<span class="fl">нет</span>';
+      if (locked) codeCell += ' <span class="tag" title="выходом управляет только код набора: режим «правило» и выключение запрещены">только код</span>';
+      if (!codeHere && !rule && en) { codeCell += ' <span class="tag bad">нет кода</span>'; noCode.push('out' + i); }
+    }
+    h += `<tr><td>out${i}</td><td class="num">${OUT_PINS[i]}</td><td><span class="live" id="lv_out${i}">—</span><div class="bar"><i id="lv_ob${i}" style="width:0"></i></div></td>
+      <td>${sel(`rule.${i}.mode`, [[0, 'код ' + B.code], [1, 'правило']], true, lockMode)}</td>${hasEn ? `<td>${chk(`out.${i}.en`, hasCode, lockEn)}</td>` : ''}<td>${chk(`out.${i}.invert`)}</td>
+      ${hasStart ? `<td>${pct(`out.${i}.start_fill`)}</td>` : ''}
+      ${hasLim ? `<td${dimCode}>${pct(`out.${i}.fill_min`)}</td><td${dimCode}>${pct(`out.${i}.fill_max`)}</td>` : ''}
+      ${hasRamp ? `<td${dimCode}>${num(`out.${i}.ramp_ms`, 'w56')}</td>` : ''}
+      <td>${lead ? num(`out.${i}.pwm_freq_hz`, 'w100') + ` <span class="fl">${B.groups[i]}</span>` : '<span class="fl">общий с группой</span>'}</td>
+      ${hasCode ? `<td>${codeCell}</td>` : ''}</tr>`;
+  }
+  h += '</table>';
+  if (noCode.length)
+    h += `<p class="note btxt">${noCode.join(', ')}: у набора нет кода для этого выхода — выберите «правило» или снимите «вкл», иначе контроллер не примет запись.</p>`;
+  h += `<p class="note">«Код» — логика chN_logic() из ${B.code} (как раньше). «Правило» — настраивается ниже, без перепрошивки. ` + B.freqNote + '</p></div>';
+
+  for (let i = 0; i < OUT_PINS.length; i++) {
+    if (!v(`rule.${i}.mode`)) continue;
+    const r = `rule.${i}`;
+    h += `<div class="card rule"><h3 style="margin-top:0">out${i} — правило <span class="live" id="lv_rc${i}"></span></h3>`;
+    h += '<div class="note">Условие: сравнения сверху вниз, И сильнее ИЛИ (a И b ИЛИ c = (a∧b)∨c). Пустое сравнение (—) пропускается; нет ни одного — «всегда».</div>';
+    h += condTerms(`${r}.t`, `${r}.join`, `lv_t${i}_`, (k, t) => termExt(i, k, t));
+    const act = Number(v(r + '.action') || 0);
+    h += '<div class="row" style="margin-top:8px">' + fld('если условие верно', sel(r + '.action', [[0, 'включить'], [1, 'мигать'], [2, 'пропорционально']], true));
+    h += fld('вкл, %', pct(r + '.on_fill')) + fld('выкл, %', pct(r + '.off_fill'));
+    if (act === 1) h += fld('горит, мс', num(r + '.blink_on_ms', 'w56')) + fld('пауза, мс', num(r + '.blink_off_ms', 'w56'));
+    h += fld('плавность, мс', num(r + '.ramp_ms', 'w56'), 'время хода 0→100 %; 0 — сразу') + '</div>';
+    if (act === 2)
+      h += '<div class="row" style="margin-top:6px">' + fld('значение', sel(r + '.f_src', SRC_OPTS_RULE.slice(1), true) + srcPick(r + '.f_src', r + '.f_ch', r + '.f_idx'))
+        + fld('от', num(r + '.map_lo', 'w100')) + fld('до', num(r + '.map_hi', 'w100'))
+        + `<span class="note">«от» → выкл %, «до» → вкл %, между — линейно</span></div>`;
+    h += '</div>';
+  }
+  return h;
+};
+
+VIEWS.dac = () => {
+  let h = '<h2>DAC</h2><div class="card"><table><tr><th>#</th><th>сейчас</th><th>вкл</th><th>источник</th><th>индекс</th><th>×num</th><th>÷den</th><th>+мВ</th><th>min</th><th>max</th><th>fixed мВ</th></tr>';
+  for (let i = 0; i < B.nDac; i++)
+    h += `<tr><td>DAC${i} ${i ? 'PA5' : 'PA4'}</td><td class="live" id="lv_dac${i}">—</td><td>${chk(`dac.${i}.enabled`)}</td>
+      <td>${sel(`dac.${i}.source`, [[0, 'fixed'], [1, 'вход'], [2, 'выход'], [3, 'custom']])}</td>
+      <td>${num(`dac.${i}.source_idx`, 'w40')}</td><td>${num(`dac.${i}.scale_num`, 'w56')}</td><td>${num(`dac.${i}.scale_den`, 'w56')}</td>
+      <td>${num(`dac.${i}.offset_mv`, 'w56')}</td><td>${num(`dac.${i}.min_mv`, 'w56')}</td><td>${num(`dac.${i}.max_mv`, 'w56')}</td>
+      <td>${num(`dac.${i}.default_mv`, 'w56')}</td></tr>`;
+  return h + '</table><p class="note">мВ = источник × num ÷ den + смещение, затем в пределы min..max. Индекс: вход 0-7, выход 0-11, custom-слот 0-3.</p></div>';
+};
+
+function canView(n) {
+  const p = `can.${n}`;
+  let h = `<h2>CAN${n} <span class="fl">${CAN_PINS[n]}</span></h2>`;
+  h += `<div class="card"><div class="row"><span class="live" id="lv_can">—</span></div><div class="row" style="margin-top:8px">`
+     + fld('включена', chk(p + '.enabled')) + fld('скорость', sel(p + '.bitrate_nominal', OPTS_CUR(BR_NOM, v(p + '.bitrate_nominal'))))
+     + fld('FD', chk(p + '.fd_mode', true)) + (v(p + '.fd_mode') ? fld('data', sel(p + '.bitrate_data', OPTS_CUR(BR_DATA, v(p + '.bitrate_data')))) + fld('BRS', chk(p + '.brs')) + fld('non-ISO', chk(p + '.non_iso')) : '')
+     + fld('только слушать', chk(p + '.op_silent'), 'Bus Monitoring: без ACK и передачи')
+     + fld('повтор передачи', chk(p + '.auto_retx')) + '</div></div>';
+
+  const rx = rowsUsed(p + '.rx', LIM.CAN_RX);
+  h += `<h3>Сигналы приёма (${rx.length}/${LIM.CAN_RX})</h3><div class="card">`;
+  h += '<div class="note">значение = raw × factor + offset. Номер — это индекс для can_value(' + n + ', #) и для правил выходов.'
+     + (S.info[p + '.rx_code'] ? ' Строки с пометкой «код набора» читает скомпилированный код — их не удалить (ID, байт, бит, множитель править можно).' : '') + '</div>';
+  if (rx.length) {
+    h += '<table><tr><th>#</th><th>имя</th><th>сейчас</th><th>ID</th><th>29 бит</th><th>байт</th><th>бит</th><th>длина</th><th>знак</th><th>factor</th><th>offset</th><th></th></tr>';
+    for (const i of rx) {
+      const r = `${p}.rx.${i}`;
+      h += `<tr><td>${i}</td><td>${txt(r + '.name')}</td><td class="live" id="lv_cs${i}">—</td><td>${hex(r + '.id')}</td><td>${chk(r + '.ext')}</td>
+        <td>${num(r + '.byte', 'w40')}</td><td>${num(r + '.bit', 'w40')}</td><td>${num(r + '.len', 'w40')}</td><td>${chk(r + '.sgn')}</td>
+        <td>${flt(r + '.factor')}</td><td>${flt(r + '.offset')}</td><td>${delBtn(p + '.rx', i)}</td></tr>`;
+    }
+    h += '</table>';
+  } else h += '<div class="empty">сигналов нет</div>';
+  h += `<button class="mini" onclick="addRow('${p}.rx',${LIM.CAN_RX},{ext:0,id:256,byte:0,bit:0,len:1,sgn:0,factor:1,offset:0,name:''})">+ сигнал</button></div>`;
+
+  const tf = rowsUsed(p + '.txf', LIM.CAN_TXF);
+  h += `<h3>Кадры передачи (${tf.length}/${LIM.CAN_TXF})</h3><div class="card">`;
+  const hasTxt = tf.length && has(`${p}.txt.0.src`), hasTxd = Object.keys(S.base).some(k => k.startsWith(p + '.txf.') && k.endsWith('.data')), ch = +p.replace('can.', '');
+  h += '<div class="note">Как в CAN Hacker: флаги, ID, DLC, байты и период — в строке. Отправляются, когда шина включена и не «только слушать». Без условия — по периоду всегда (период 0 — не отправлять). '
+    + (hasTxt ? 'Условие запуска — до 4 сравнений сверху вниз, И сильнее ИЛИ (как у выходов): «периодически, пока верно» — по периоду, пока условие истинно; «N раз при срабатывании» — при переходе условия в «верно» пачка из N кадров с интервалом «период». «Задержка пуска» — первый кадр через столько мс после того, как условие стало верным (без условия — после включения шины): так задаётся строгая очерёдность кадров с одним условием. Если источник сравнения — вход, под ним появляются его настройки (тумблер / кнопка без фиксации, нажатие, режим). ' : '')
+    + (hasTxd ? '' : 'Эта прошивка не хранит байты кадра — обновите её. ')
+    + '«Отправить» шлёт кадр один раз прямо сейчас (значения из строки, даже ещё не записанные); канал должен быть в режиме передачи.</div>';
+  if (tf.length) {
+    h += '<table><tr><th>#</th><th>флаги</th><th>ID</th><th>DLC</th><th>данные (hex)</th><th>период, мс</th><th>счётчик</th><th>комментарий</th><th></th></tr>';
+    for (const i of tf) {
+      const r = `${p}.txf.${i}`, t = `${p}.txt.${i}`, dlc = Number(v(r + '.dlc') || 0), fd = Number(v(r + '.fd') || 0);
+      const flags = `<label class="fl2" title="29-битный ID">${chk(r + '.ext')} 29 bit</label><label class="fl2">${chk(r + '.fd', true)} FD</label>`
+        + (fd ? `<label class="fl2" title="переключение скорости данных">${chk(r + '.brs')} BRS</label>` : '');
+      let cells;
+      if (!hasTxd) cells = '<span class="fl">прошивка не хранит байты кадра</span>';
+      else if (!dlc) cells = '<span class="fl">DLC 0</span>';
+      else {
+        const cur = hexPad(v(r + '.data'), LIM.CAN_TXD); cells = '';
+        for (let j = 0; j < dlc; j++) {                     /* FD: сетка как в CAN Hacker — ряд 16 байт, две группы по 8 */
+          if (j && j % 16 === 0) cells += '<br>'; else if (j && j % 8 === 0) cells += '<span class="bgap"></span>';
+          cells += j < LIM.CAN_TXD
+            ? `<input type="text" maxlength="2" data-path="${r}.data" data-k="byte" data-i="${j}" class="hexb${cls(r + '.data')}" value="${cur.slice(j * 2, j * 2 + 2)}" title="байт ${j}">`
+            : `<input type="text" class="hexb" value="··" disabled title="на этой плате в конфиге хранятся первые ${LIM.CAN_TXD} байт, остальные уходят нулями">`;
+        }
+      }
+      h += `<tr><td>${i}</td><td>${flags}</td><td>${hex(r + '.id')}</td><td>${sel(r + '.dlc', OPTS(fd ? DLC_ALL : DLC_CLASSIC), true)}</td><td class="cells">${cells}</td>
+        <td>${num(r + '.period_ms', 'w56')}</td><td class="live" id="lv_txc${ch}_${i}">—</td><td>${txt(r + '.name')}</td>
+        <td><button class="mini" onclick="txNow('${p}',${i})" title="отправить один раз сейчас (как «Отправить» в CAN Hacker)">отправить</button> <button class="mini" onclick="copyRow('${p}',${i})">копировать</button> <button class="mini danger" onclick="delRow('${p}.txf',${i})">удалить</button></td></tr>`;
+      let sub = '';
+      if (hasTxt) {
+        const tm = Number(v(t + '.mode') || 0), anyC = txHasCond(ch, i);
+        sub += '<div class="row"><span class="f"><label>условие запуска</label></span>'
+          + (anyC ? fld('режим', sel(t + '.mode', [[0, 'периодически, пока верно'], [1, 'N раз при срабатывании']], true)) + (tm === 1 ? fld('N', num(t + '.count', 'w40')) : '')
+                  : '<span class="fl">нет — всегда по периоду</span>')
+          + (has(t + '.delay_ms') ? fld('задержка пуска, мс', num(t + '.delay_ms', 'w56'), 'от момента, когда условие стало верным (без условия — от включения шины); задаёт очерёдность кадров с одним условием') : '')
+          + ` <span class="live" id="lv_txr${ch}_${i}"></span></div>`;
+        sub += txCondTerms(ch, i);
+      }
+      if (hasTxd && dlc) sub += `<div class="row"><span class="f"><label>заполнить все байты</label><input type="text" maxlength="2" class="hexb" id="fill${ch}_${i}" value="00"> <button class="mini" onclick="fillRow('${p}',${i})">заполнить</button></span></div>`;
+      if (sub) h += `<tr class="sub"><td></td><td colspan="8">${sub}</td></tr>`;
+    }
+    h += '</table>';
+  } else h += '<div class="empty">кадров нет</div>';
+  h += `<button class="mini" onclick="addRow('${p}.txf',${LIM.CAN_TXF},{ext:0,id:256,dlc:8,fd:0,brs:0,period_ms:100,name:''${hasTxd ? ",data:''" : ''}})">+ кадр</button></div>`;
+  return h;
+}
+
+/* таблица сигналов с источником значения: TX CAN и сигналы LIN */
+const DLC_ALL = [0, 1, 2, 3, 4, 5, 6, 7, 8, 12, 16, 20, 24, 32, 48, 64], DLC_CLASSIC = [0, 1, 2, 3, 4, 5, 6, 7, 8];
+function hexPad(s, n) { s = String(s || '').toUpperCase(); return (s + '0'.repeat(2 * n)).slice(0, 2 * n); }
+function hexNorm(s) { return String(s || '').toUpperCase().replace(/(00)+$/, ''); }
+/* копия кадра (txf + условие txt) в первую свободную строку */
+function copyRow(p, i) {
+  for (let j = 0; j < LIM.CAN_TXF; j++) {
+    if (v(`${p}.txf.${j}.on`)) continue;
+    for (const pre of ['txf', 'txt']) {
+      const a = `${p}.${pre}.${i}.`, b = `${p}.${pre}.${j}.`;
+      for (const k of Object.keys(S.model)) if (k.startsWith(a)) S.model[b + k.slice(a.length)] = S.model[k];
+    }
+    S.model[`${p}.txf.${j}.on`] = 1; render(); return;
+  }
+  alert('Свободных строк нет (максимум ' + LIM.CAN_TXF + ').');
+}
+/* все байты кадра = значение из поля «заполнить» (как «Заполнить» в CAN Hacker) */
+function fillRow(p, i) {
+  const ch = +p.replace('can.', ''), e = document.getElementById(`fill${ch}_${i}`), s = (e ? e.value : '00').trim();
+  if (!/^[0-9a-f]{1,2}$/i.test(s)) { alert('значение — hex 00..FF'); return; }
+  const n = Math.min(Number(v(`${p}.txf.${i}.dlc`) || 0), LIM.CAN_TXD);
+  S.model[`${p}.txf.${i}.data`] = hexNorm(s.toUpperCase().padStart(2, '0').repeat(n)); render();
+}
+/* отправить кадр один раз сейчас — через слот передачи монитора (/tx), значения из строки */
+async function txNow(p, i) {
+  const r = `${p}.txf.${i}`, ch = +p.replace('can.', ''), dlc = Number(v(r + '.dlc') || 0), fd = Number(v(r + '.fd') || 0);
+  const body = { ch, id: Number(v(r + '.id') || 0), ext: Number(v(r + '.ext') || 0), fd, brs: fd ? Number(v(r + '.brs') || 0) : 0,
+                 dlc, data: hexPad(v(r + '.data'), Math.max(dlc, 1)).slice(0, dlc * 2), period: 0 };
+  let res; try { res = await (await fetch('/tx', { method: 'POST', body: JSON.stringify(body) })).json(); } catch (e) { res = { error: String(e) }; }
+  const err = res && (res.error || (res.resp === 'err' ? (res.msg || 'отказ') : ''));
+  set(`lv_txc${ch}_${i}`, err ? 'не отправлено: ' + err : 'отправлено', 'live ' + (err ? 'fl' : 't'));
+}
+/* условие запуска кадра: сравнение 0 — can.N.txt.K (+ настройки входа там же), сравнения 1..3 — can.N.txe.(K*4+k-1) */
+function txTermPath(ch, i, k) { return k === 0 ? `can.${ch}.txt.${i}` : `can.${ch}.txe.${i * 4 + k - 1}`; }
+function txJoinPath(ch, i, k) { return `can.${ch}.txe.${i * 4 + k - 1}.join`; }   /* связка перед сравнением k ≥ 1 */
+function txTerms(ch) { return has(`can.${ch}.txe.0.src`) ? 4 : 1; }               /* прошивка без txe — одно сравнение */
+function txHasCond(ch, i) { for (let k = 0; k < txTerms(ch); k++) if (Number(v(txTermPath(ch, i, k) + '.src') || 0)) return true; return false; }
+function txCondTerms(ch, i) {
+  let h = '';
+  for (let k = 0; k < txTerms(ch); k++) {
+    const t = txTermPath(ch, i, k);
+    if (k) h += `<div class="join">${sel(txJoinPath(ch, i, k), [[0, 'И'], [1, 'ИЛИ']])}</div>`;
+    h += `<div class="term">${sel(t + '.src', SRC_OPTS_RULE, true)} ${srcPick(t + '.src', t + '.ch', t + '.idx')}`;
+    if (Number(v(t + '.src'))) h += ` ${sel(t + '.op', OP_OPTS)} ${num(t + '.val', 'w100')} <span class="live" id="lv_txt${ch}_${i}_${k}"></span>`;
+    h += '</div>' + termExt(`t${ch}_${i}`, k, t, `can.${ch}.txt.0.ctl`);
+  }
+  return h;
+}
+/* живые значения кадров передачи: счётчик, условие запуска (И/ИЛИ, настройки входа, фиксация кнопки) */
+function txLive(ch, d) {
+  const c = d.can && d.can[ch];
+  for (let i = 0; i < LIM.CAN_TXF; i++) {
+    if (!v(`can.${ch}.txf.${i}.on`)) continue;
+    if (c && c.txc && c.txc[i] !== undefined) set(`lv_txc${ch}_${i}`, String(c.txc[i]));
+    if (!txHasCond(ch, i)) continue;
+    const n = txTerms(ch), paths = [], joins = [];
+    for (let k = 0; k < n; k++) { paths.push(txTermPath(ch, i, k)); if (k) joins.push(txJoinPath(ch, i, k)); }
+    const mask = c && c.tl ? Number(c.tl[i]) : undefined;
+    const ev = evalCondP(paths, joins,
+      (k, r) => set(`lv_txt${ch}_${i}_${k}`, `сейчас ${r.x} → ${r.ok ? 'да' : 'нет'}`, 'live ' + (r.ok ? 't' : 'fl')),
+      (k, r) => termEff(paths[k], r, `t${ch}_${i}`, k, mask, `can.${ch}.txt.0.ctl`));
+    set(`lv_txr${ch}_${i}`, ev.known ? (ev.res ? '· условие верно' : '· условие неверно') : '', 'live ' + (ev.res ? 't' : 'fl'));
+  }
+}
+function txSigTable(p, max, frames, title, isLin) {
+  const rows = rowsUsed(p, max);
+  const srcCol = !isLin || B.linModes.includes(2);       /* источник значения нужен только для кадров master TX */
+  let h = `<h3>${title} (${rows.length}/${max})</h3><div class="card">`;
+  h += !isLin ? '<div class="note">raw = (значение − offset) ÷ factor, укладывается в кадр по байту/биту/длине.</div>'
+    : srcCol ? '<div class="note">Кадр master RX / monitor: сигнал читается из кадра (lin_value(ch, #)). Кадр master TX: значение берётся из «источника», raw = (значение − offset) ÷ factor.</div>'
+    : '<div class="note">Сигнал читается из кадра: значение = raw × factor + offset. Номер — индекс для lin_value(' + p.split('.')[1] + ', #) и для правил выходов.'
+      + (S.info[p + '_code'] ? ' Строки с пометкой «код набора» читает скомпилированный код — их не удалить.' : '') + '</div>';
+  if (!frames.length) return h + '<div class="empty">сначала добавь кадр</div></div>';
+  if (rows.length) {
+    h += `<table><tr><th>#</th><th>имя</th>${isLin ? '<th>сейчас</th>' : ''}<th>кадр</th><th>байт</th><th>бит</th><th>длина</th><th>знак</th><th>factor</th><th>offset</th>${srcCol ? '<th>источник</th><th></th><th>конст.</th>' : ''}<th></th></tr>`;
+    for (const i of rows) {
+      const r = `${p}.${i}`;
+      const s = Number(v(r + '.src') || 0);
+      h += `<tr><td>${i}</td><td>${txt(r + '.name')}</td>${isLin ? `<td class="live" id="lv_ls${i}">—</td>` : ''}<td>${sel(r + '.frame', frames)}</td>
+        <td>${num(r + '.byte', 'w40')}</td><td>${num(r + '.bit', 'w40')}</td><td>${num(r + '.len', 'w40')}</td><td>${chk(r + '.sgn')}</td>
+        <td>${flt(r + '.factor')}</td><td>${flt(r + '.offset')}</td>${srcCol ? `<td>${sel(r + '.src', SRC_OPTS_TX, true)}</td>
+        <td>${srcPick(r + '.src', r + '.src_ch', r + '.src_idx')}</td><td>${s === 0 ? num(r + '.def', 'w56') : ''}</td>` : ''}
+        <td>${delBtn(p, i)}</td></tr>`;
+    }
+    h += '</table>';
+  } else h += '<div class="empty">сигналов нет</div>';
+  return h + `<button class="mini" onclick="addRow('${p}',${max},{frame:${frames[0][0]},byte:0,bit:0,len:${isLin ? 1 : 8},sgn:0,factor:1,offset:0,src:0,src_ch:0,src_idx:0,def:0,name:''})">+ сигнал</button></div>`;
+}
+
+function linView(n) {
+  const p = `lin.${n}`;
+  let h = `<h2>LIN${n} <span class="fl">${LIN_PINS[n]}</span></h2>`;
+  const master = B.linModes.includes(2);
+  const nodes = Object.keys(S.base).filter(k => k.startsWith(p + '.node.')).map(k => k.slice(p.length + 6));
+  h += `<div class="card"><div class="row"><span class="live" id="lv_lin">—</span></div><div class="row" style="margin-top:8px">`
+     + fld('включена', chk(p + '.enabled')) + fld('режим', sel(p + '.mode', [[0, 'Monitor'], [1, 'Slave'], [2, 'Master']].filter(o => B.linModes.includes(o[0])), nodes.length > 0))
+     + fld('протокол', sel(p + '.protocol', [[0, 'LIN 1.x'], [1, 'LIN 2.x']])) + fld('бод', num(p + '.baudrate'))
+     + (has(p + '.verify_cs') ? fld('проверять checksum', chk(p + '.verify_cs'), 'проверять контрольную сумму чужих кадров; кадр с неверной не декодируется') : '')
+     + '</div></div>';
+  if (nodes.length) {
+    const slave = Number(v(p + '.mode') || 0) === 1;
+    h += '<h3>Узлы-эмуляторы (Slave)</h3><div class="card"><div class="row">'
+       + nodes.map(k => { const d = (B.nodes || {})[k] || [k, '']; return fld(esc(d[0]), chk(`${p}.node.${k}`, true), d[1]); }).join('') + '</div>';
+    h += `<div class="note">Логика узлов вкомпилирована в прошивку (набор), здесь — только включение. Узлы отвечают мастеру машины только в режиме Slave.`
+       + (!slave && nodes.some(k => v(`${p}.node.${k}`)) ? ' <span class="btxt">Режим не Slave — контроллер не примет запись с включённым узлом.</span>' : '') + '</div>';
+    h += '<div id="lv_lslave" style="margin-top:6px"></div></div>';
+  } else h += '<div id="lv_lslave"></div>';
+  const fr = rowsUsed(p + '.fr', LIM.LIN_FR);
+  h += `<h3>Кадры (${fr.length}/${LIM.LIN_FR})</h3><div class="card">`;
+  h += master ? '<div class="note">ID — 6 бит без чётности (0x00..0x3F). Master опрашивает кадры с периодом; monitor/slave только слушают.</div>'
+              : '<div class="note">ID — 6 бит без чётности (0x00..0x3F). Кадры шины только слушаются и декодируются (Master у этой платы нет).</div>';
+  if (fr.length) {
+    h += '<table><tr><th>#</th><th>имя</th><th>ID</th><th>длина</th><th>направление</th><th>период, мс</th><th></th></tr>';
+    for (const i of fr) {
+      const r = `${p}.fr.${i}`;
+      h += `<tr><td>${i}</td><td>${txt(r + '.name')}</td><td>${hex(r + '.pid')}</td><td>${num(r + '.len', 'w40', 'min="1" max="8"')}</td>
+        <td>${sel(r + '.dir', [[0, 'master TX'], [1, 'master RX'], [2, 'monitor']].filter(o => B.linDirs.includes(o[0]) || o[0] === Number(v(r + '.dir'))))}</td><td>${num(r + '.period_ms', 'w56')}</td>
+        <td><button class="mini danger" onclick="delRow('${p}.fr',${i})">удалить</button></td></tr>`;
+    }
+    h += '</table>';
+  } else h += '<div class="empty">кадров нет</div>';
+  h += `<button class="mini" onclick="addRow('${p}.fr',${LIM.LIN_FR},{pid:0,len:8,dir:2,period_ms:0,name:''})">+ кадр</button></div>`;
+  h += txSigTable(p + '.sig', LIM.LIN_SIG, fr.map(i => [i, `#${i} ${v(`${p}.fr.${i}.name`) || ''} · 0x${Number(v(`${p}.fr.${i}.pid`)).toString(16).toUpperCase()}`]), 'Сигналы', true);
+  return h;
+}
+VIEWS.can0 = () => canView(0); VIEWS.can1 = () => canView(1); VIEWS.can2 = () => canView(2);
+VIEWS.lin0 = () => linView(0); VIEWS.lin1 = () => linView(1);
+
+/* источник «зажигание включено» — общий для правил выходов «по зажиганию» */
+function ignSet() { return [0, 1, 2, 3].some(k => Number(v(`ign.t.${k}.src`) || 0)); }
+/* условие: сравнения t.K + связки join.K-1 (как в правиле) */
+function condTerms(tp, jp, liveId, extra) {
+  let h = '';
+  for (let k = 0; k < 4; k++) {
+    const t = `${tp}.${k}`;
+    if (k) h += `<div class="join">${sel(`${jp}.${k - 1}`, [[0, 'И'], [1, 'ИЛИ']])}</div>`;
+    h += `<div class="term">${sel(t + '.src', SRC_OPTS_RULE, true)} ${srcPick(t + '.src', t + '.ch', t + '.idx')}`;
+    if (Number(v(t + '.src'))) h += ` ${sel(t + '.op', OP_OPTS)} ${num(t + '.val', 'w100')} <span class="live" id="${liveId}${k}"></span>`;
+    h += '</div>';
+    if (extra) h += extra(k, t);
+  }
+  return h;
+}
+/* настройки сравнения-входа (только src = вход): тумблер / кнопка без фиксации, нажатие, разрешение, режим */
+function termExt(i, k, t, featP) {
+  if (!has(featP || `${t}.ctl`) || Number(v(t + '.src') || 0) !== 1) return '';
+  const ctl = Number(v(t + '.ctl') || 0), pw = Number(v(t + '.power') || 0), gs = Number(v(t + '.g.src') || 0);
+  let h = '<div class="row" style="margin:2px 0 6px 24px">'
+    + fld('вход', sel(t + '.ctl', [[0, 'тумблер (с фиксацией) — как есть'], [1, 'кнопка без фиксации — каждое нажатие переключает']], true),
+          'кнопка без фиксации: нажал — включилось, нажал ещё раз — выключилось')
+    + (ctl === 1 ? fld('нажатие не короче, мс', num(t + '.trig_ms', 'w56'), 'сравнение должно держаться столько, чтобы считаться нажатием; 0 — сразу') : '')
+    + fld('режим', sel(t + '.power', [[0, 'постоянный'], [1, 'по зажиганию']], true),
+          'по зажиганию: пока зажигания нет — этот вход считается выключенным, фиксация кнопки сброшена; условие зажигания — раздел «Сон»')
+    + (pw && !ignSet() ? ' <span class="tag bad">условие зажигания не задано — раздел «Сон»</span>' : '')
+    + (ctl === 1 ? ` <span class="live" id="lv_rl${i}_${k}"></span>` : '') + '</div>';
+  if (ctl === 1) {
+    h += '<div class="row" style="margin:0 0 6px 24px">' + fld('работает, пока', sel(t + '.g.src', SRC_OPTS_RULE, true) + srcPick(t + '.g.src', t + '.g.ch', t + '.g.idx'));
+    if (gs) h += ` ${sel(t + '.g.op', OP_OPTS)} ${num(t + '.g.val', 'w100')} <span class="live" id="lv_g${i}_${k}"></span>`;
+    h += ' <span class="note">разрешение кнопки: стало ложным — вход выключен и фиксация сброшена; «—» — без условия</span></div>';
+  }
+  return h;
+}
+function ignCard() {
+  if (!has('ign.t.0.src')) return '';
+  return '<div class="card"><h3 style="margin-top:0">Зажигание <span class="live" id="lv_ign"></span></h3>'
+    + '<div class="note">Общий признак «зажигание включено» для правил выходов в режиме «по зажиганию»: сравнения сверху вниз, И сильнее ИЛИ. '
+    + 'Например: бит «зажигание» ≠ 0 ИЛИ бит «двигатель запущен» ≠ 0. Пустое сравнение (—) пропускается; нет ни одного — не задано.</div>'
+    + condTerms('ign.t', 'ign.join', 'lv_ig') + '</div>';
+}
+
+VIEWS.sleep = () => {
+  let h = '<h2>Сон</h2>' + ignCard() + '<div class="card"><div class="row"><span class="live" id="lv_slp">—</span></div><div class="row" style="margin-top:8px">'
+    + fld('сон разрешён', chk('stop.enabled')) + fld('только при выключенных выходах', chk('stop.require_outputs_off'))
+    + fld('не спать, пока открыт монитор', chk('stop.usb_hold'), 'держит и открытый порт, и команды окна настроек (ping раз в 3 с); снять — чтобы проверять сон с подключённым ноутбуком: контроллер уснёт и пропадёт с USB')
+    + fld('не спать первые, мс', num('stop.min_awake_ms')) + '</div><div class="row" style="margin-top:6px">'
+    + fld('CAN молчит, мс', num('stop.can_idle_ms'))
+    + (has('stop.can_any') ? fld('любой кадр CAN — активность', chk('stop.can_any'), 'снято — активностью считаются только кадры с ID из таблицы приёма') : '')
+    + fld('LIN молчит, мс', num('stop.lin_idle_ms'))
+    + (has('stop.lin_boot_ms') ? fld('LIN после старта, мс', num('stop.lin_boot_ms'), 'сколько ждать тишины LIN, пока с запуска не было ни одного кадра (на столе без 12 В шины нет)') : '')
+    + fld('вход не меняется, мс', num('stop.inputs_idle_ms')) + '</div>';
+  /* H503: выходы в нуле, плавное гашение, фронт входов */
+  if (has('stop.out_zero_ms') || has('stop.fade') || has('stop.wake_edge')) {
+    h += '<div class="row" style="margin-top:6px">'
+      + (has('stop.out_zero_ms') ? fld('выходы в нуле, мс', num('stop.out_zero_ms'), 'при «только при выключенных выходах»: сколько все выходы должны быть в нуле') : '')
+      + (has('stop.out_zero_thr') ? fld('нулём считать ≤, %', pct('stop.out_zero_thr')) : '')
+      + (has('stop.fade') ? fld('гасить выходы плавно', chk('stop.fade', true)) : '')
+      + (has('stop.fade_ms') && v('stop.fade') ? fld('за, мс', num('stop.fade_ms', 'w56')) : '')
+      + (has('stop.wake_edge') ? fld('вход будит', sel('stop.wake_edge', [[0, 'любым фронтом'], [1, 'только переходом в активное']])) : '')
+      + '</div>';
+  }
+  h += '<div class="live" id="lv_slpw" style="margin-top:6px"></div></div>';
+  h += '<div class="card"><div class="note">«Должен молчать»: уснёт, только когда ВСЕ отмеченные молчат своё время (цифровой вход — без смены состояния, аналоговый — '
+    + (B.prot === 'ps' ? 'не меняется больше чем на «шум мВ» входа' : 'не уходит больше чем на 300 мВ') + '). '
+    + '«Будит»: фронт на пине. Будить может только цифровой вход; ' + B.wakeNote + '</div>';
+  h += '<table><tr><th>источник</th><th>пин</th><th>должен молчать</th><th>будит</th></tr>';
+  for (const [k, n, pin, canWake] of B.wake)
+    h += `<tr><td>${n}</td><td class="num">${pin}</td><td style="text-align:center">${chk('stop.sleep.' + k)}</td>`
+       + `<td style="text-align:center">${canWake ? chk('stop.wake.' + k) : '<span class="fl" title="нет линии пробуждения">—</span>'}</td></tr>`;
+  return h + '</table></div>';
+};
+
+/* G4, плагин app/drl_ctrl.c: «поворотники как ДХО» через UDS (IOControl 2F к блокам фар) */
+VIEWS.drl = () => '<h2>ДХО</h2><div class="card"><div class="row">'
+  + fld('ДХО включены', nchk('drl.off'), 'снять — плагин отдаёт обе фары BCM и больше их не перехватывает') + '</div>'
+  + '<div class="row" style="margin-top:6px"><span class="live" id="lv_drl">—</span></div>'
+  + '<p class="note">Поворотники горят как дневные ходовые огни, пока двигатель работает (IGN2 по CAN): '
+  + 'контроллер открывает диагностическую сессию в блоке каждой фары и держит поворот включённым. '
+  + 'Включил поворотник — сторона отдаётся BCM, после выключения перехватывается снова. '
+  + 'Выключение здесь действует сразу: обе фары отдаются BCM с подтверждённым закрытием сессии.<br>'
+  + 'Режим стороны: «с подтверждением» — блок фары отвечает на каждый запрос; «вслепую» — ответов нет, '
+  + 'команды идут как в исходной рабочей версии (фары всё равно горят).</p></div>';
+
+VIEWS.diag = () => '<h2>Диагностика</h2><div class="card"><div class="row">' + fld('телеметрия в USB', chk('diag.enabled'))
+  + fld('период, мс', num('diag.period_ms')) + (has('diag.keep_text_log') ? fld('текстовый лог', chk('diag.keep_text_log')) : '') + '</div>'
+  + '<p class="note">При выключенной телеметрии приложение перестанет видеть живые значения.</p></div>'
+  + '<div class="card"><div class="row"><button onclick="resetDefaults()">Сбросить всё на дефолты прошивки…</button></div>'
+  + '<p class="note">Дефолты — значения из *_config.h, с которыми собрана прошивка. Записываются сразу.</p></div>';
+
+VIEWS.protect = () => B.prot === 'ps'
+  /* H503: PRODUCT_STATE. Закрывают и открывают только ST-Link по SWD (с 2026-10-07 прошивка чип не закрывает) */
+  ? '<h2>Защита прошивки</h2><div class="card"><div class="row"><span class="live" id="lv_rdp">—</span></div>'
+  + '<p class="note">На H503 закрывают и открывают чип только ST-Link\'ом по SWD, скриптами из папки <b>H_503\\ЗАЩИТА</b> (порядок — в README там же): '
+  + 'OPEN → PROVISIONING → пароль DA в OTP → CLOSED, как требует ST. Из монитора по USB этого не сделать: '
+  + 'в состоянии PROVISIONING прошивка не запускается.<br>'
+  + 'Снять защиту — «ЗАЩИТА\\5_снять_защиту_со_стиранием.bat»: весь флеш стирается, включая конфиг, потом прошить заново.</p></div>'
+  : '<h2>Защита прошивки</h2><div class="card"><div class="row"><span class="live" id="lv_rdp">—</span></div>'
+  + '<div class="row" style="margin-top:8px"><input id="sec_key" type="password" placeholder="ключ" autocomplete="off" style="width:200px">'
+  + '<button onclick="secCmd(\'sec_lock\')">Включить (Lock)</button><button class="danger" onclick="secCmd(\'sec_unlock\')">Снять (стирает флеш!)</button></div>'
+  + '<p class="note">Lock — блокирует чтение прошивки, сама прошивка и конфиг остаются. Unlock — <b>стирает весь флеш</b>, контроллер перезагрузится пустым.</p></div>';
+
+VIEWS.tools = () => '<h2>Инструменты</h2><div class="card"><div class="row">'
+  + '<button onclick="window.open(\'/sniffer\')">CAN сниффер</button><button onclick="window.open(\'/assist\')">Совместная работа</button>'
+  + '<button onclick="window.open(\'/\')">Старый дашборд</button></div></div>'
+  + fileCard()
+  + '<div class="card"><h3 style="margin-top:0">Прошивка контроллера</h3>'
+  + '<div class="row"><select id="fl_file" style="max-width:640px"></select>'
+  + '<button onclick="flashRefresh(true)" title="обновить список файлов">↻</button></div>'
+  + '<div class="row" style="margin-top:6px"><input id="fl_path" type="text" placeholder="или полный путь к .elf / .hex" style="width:640px"></div>'
+  + '<div class="row" style="margin-top:8px"><button class="primary" id="fl_go" onclick="flashStart()">Прошить</button>'
+  + '<button onclick="flashCancel()">Отмена</button><span class="live" id="lv_boot"></span></div>'
+  + '<div id="fl_msg" style="margin-top:8px;font-size:14px;font-weight:600"></div>'
+  + '<pre id="fl_log" class="note" style="max-height:260px;overflow:auto;white-space:pre-wrap;margin-top:6px"></pre>'
+  + (B.dfu === 'jump'
+    ? '<p class="note">Как это работает: контроллер по команде <b>сам перезапускается</b> в загрузчик USB DFU (BOOT0 не нужен) → '
+    + 'файл записывается и проверяется → прошивка запускается. Если DFU не появился — зажмите BOOT0 и нажмите RESET '
+    + '(или подключите USB с зажатой BOOT0). Конфиг лежит во Flash с 0x0801C000: файл, который залез бы туда, монитор не запишет. '
+    + 'Нужен STM32CubeProgrammer (или STM32CubeIDE). Перед прошивкой другого набора сохраните конфиг в файл (выше).</p></div>'
+    : '<p class="note">Как это работает: контроллер переключает адрес старта на загрузчик (без перезагрузки) → вы <b>переподключаете USB</b> → '
+    + 'он стартует в DFU → файл записывается и проверяется → прошивка запускается и сама возвращает адрес старта на Flash. '
+    + 'Нужен STM32CubeProgrammer (или STM32CubeIDE). Файл по умолчанию — самый свежий .elf из папки сборки проекта.</p>'
+    + '<div class="row"><button class="mini" onclick="dfuPrep(1)">Отменить подготовку (адрес старта → Flash)</button></div></div>');
+
+/* ---- конфиг в файл / из файла (все платы): JSON из S.model, загрузка — правками + writeAll ---- */
+function fileCard() {
+  return '<div class="card"><h3 style="margin-top:0">Конфигурация в файле</h3><div class="row">'
+    + `<button onclick="cfgSave()" ${S.loaded ? '' : 'disabled title="сначала прочитайте конфиг из контроллера"'}>Сохранить конфиг в файл…</button>`
+    + `<button onclick="document.getElementById('cfg_file').click()" ${S.loaded ? '' : 'disabled title="сначала прочитайте конфиг из контроллера"'}>Загрузить из файла…</button>`
+    + '<input type="file" id="cfg_file" accept=".json,application/json" style="display:none" onchange="cfgLoad(this)"></div>'
+    + '<p class="note">Сохраняется то, что сейчас на странице (вместе с незаписанными правками). Загрузка кладёт значения из файла '
+    + 'как правки и предлагает записать их в контроллер; ключи, которых у этой прошивки нет, и поля «только чтение» пропускаются. '
+    + 'Нужно перед перепрошивкой, сменой набора и снятием защиты.</p></div>';
+}
+function cfgSave() {
+  if (!S.loaded) return;
+  const cfg = {};
+  for (const k of Object.keys(S.model).sort()) {
+    const r = ROW_RE.exec(k);
+    if (r && !k.endsWith('.on') && !S.model[r[1] + '.on']) continue;       /* поля незанятых строк не нужны */
+    cfg[k] = S.model[k];
+  }
+  const d = new Date(), p2 = x => String(x).padStart(2, '0');
+  const stamp = `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}_${p2(d.getHours())}${p2(d.getMinutes())}`;
+  const doc = { uc_config: 1, board: BRD, set: S.info.set, seq: S.info.seq, saved: d.toISOString(), cfg };
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(doc, null, 1)], { type: 'application/json' }));
+  a.download = `UC_${BRD}_${String(S.info.set || 'config').replace(/[^\wА-Яа-яЁё.-]+/g, '_')}_${stamp}.json`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  status('конфиг сохранён в файл ' + a.download, 'ok');
+}
+function cfgLoad(inp) {
+  const f = inp.files && inp.files[0];
+  inp.value = '';
+  if (!f || !S.loaded || S.busy) return;
+  const rd = new FileReader();
+  rd.onload = () => {
+    let doc;
+    try { doc = JSON.parse(rd.result); } catch (e) { status('файл не JSON: ' + e.message, 'err'); return; }
+    const cfg = doc && typeof doc.cfg === 'object' ? doc.cfg : doc;
+    if (!cfg || typeof cfg !== 'object' || Array.isArray(cfg)) { status('в файле нет конфигурации', 'err'); return; }
+    if (doc.board && doc.board !== BRD &&
+        !confirm(`Файл сохранён с платы ${doc.board}, а подключена ${BRD}. Загрузить то, что совпадает по ключам?`)) return;
+    if (doc.set !== undefined && S.info.set !== undefined && doc.set !== S.info.set &&
+        !confirm(`Файл — от набора «${doc.set}», а в контроллере набор «${S.info.set}». Загрузить всё равно?`)) return;
+    const ro = B.roKeys || [];
+    let used = 0, skipped = 0;
+    const next = Object.assign({}, S.model);
+    for (const k in cfg) {
+      const val = cfg[k];
+      const r = ROW_RE.exec(k);
+      const known = has(k) || (r && has(r[1] + '.on'));      /* поля незанятой строки у контроллера не выводятся */
+      const badStr = typeof val === 'string' && (/["\\\u0000-\u001f]/.test(val) || new TextEncoder().encode(val).length > 23);
+      if (!known || INFO_RE.test(k) || ro.includes(k) || (typeof val !== 'number' && typeof val !== 'string') || badStr ||
+          (typeof val === 'number' && !Number.isFinite(val)) || (has(k) && typeof S.base[k] !== typeof val)) { skipped++; continue; }
+      next[k] = val; used++;
+    }
+    if (!used) { status('в файле нет подходящих ключей для этой прошивки', 'err'); return; }
+    S.model = next;
+    render();
+    const n = changes().length;
+    if (!n) { status(`файл загружен (${used} знач.) — отличий от контроллера нет`, 'ok'); return; }
+    status(`из файла: ${used} знач.${skipped ? `, пропущено ${skipped}` : ''} → ${n} изм. (подсвечены)`, 'warn');
+    if (confirm(`Из файла взято ${used} значений${skipped ? ` (пропущено ${skipped})` : ''}, отличий от контроллера: ${n}.\n\nЗаписать их в контроллер сейчас?\n(«Отмена» — оставить правками на странице)`)) writeAll();
+  };
+  rd.onerror = () => status('не удалось прочитать файл', 'err');
+  rd.readAsText(f);
+}
+
+async function dfuPrep(off) {
+  const r = await cmdResp(off ? { cmd: 'dfu', off: 1 } : { cmd: 'dfu' });
+  status(r.resp === 'ok' ? (off ? 'адрес старта — Flash, обычная загрузка' : 'готово: переподключите USB — контроллер стартует в DFU')
+                         : 'ошибка: ' + (r.msg || JSON.stringify(r)), r.resp === 'ok' ? 'ok' : 'err');
+}
+
+/* ---- прошивка: монитор ведёт цикл сам (/flash, /flash/start, /flash/cancel) ---- */
+let flTimer = null, flFilesShown = '';
+async function flashRefresh(files) {
+  let j;
+  try { j = await (await fetch('/flash')).json(); } catch (e) { return; }
+  const sel = document.getElementById('fl_file');
+  if (!sel) { clearInterval(flTimer); flTimer = null; return; }
+  const key = JSON.stringify(j.files.map(f => f.path + f.time));
+  if (files || key !== flFilesShown) {
+    const cur = sel.value;
+    sel.innerHTML = j.files.length
+      ? j.files.map(f => `<option value="${esc(f.path)}">${f.over ? '⛔ ' : ''}${esc(f.name)} · ${f.time} · ${Math.round(f.size / 1024)} КБ · ${esc(f.dir)}`
+          /* H503: монитор не запишет файл, заходящий в журнал конфига (over), или неразобранный (bad) */
+          + (f.over ? ' — ' + (f.bad ? 'не разобран: ' + esc(f.bad) : `заходит в журнал конфига (конец ${esc(f.end)})`) : '') + '</option>').join('')
+      : '<option value="">файлы .elf/.hex не найдены — укажите путь ниже</option>';
+    if (cur && j.files.some(f => f.path === cur)) sel.value = cur;
+    else { const ok = j.files.find(f => !f.over); if (ok) sel.value = ok.path; }   /* по умолчанию — самый свежий, который можно прошить */
+    flFilesShown = key;
+  }
+  const msg = document.getElementById('fl_msg');
+  const col = { replug: 'var(--warn)', done: 'var(--ok)', error: 'var(--bad)' }[j.state] || 'var(--fg)';
+  msg.style.color = col;
+  msg.textContent = !j.cli ? 'Не найден STM32_Programmer_CLI — установите STM32CubeProgrammer'
+                  : (j.state === 'idle' ? '' : (j.state === 'replug' ? '⚠ ' : '') + j.message);
+  document.getElementById('fl_log').textContent = (j.log || []).join('\n');
+  /* Залоченный контроллер загрузчик прошить не даст — кнопку не даём нажать. */
+  const d = S.data || {};
+  const locked = (d.rdp !== undefined && d.rdp !== 0) ? 'RDP ' + d.rdp
+               : (d.ps !== undefined && d.ps !== 'open') ? 'PRODUCT_STATE ' + d.ps : null;
+  document.getElementById('fl_go').disabled = j.busy || !j.cli || !!locked;
+  if (locked && !j.busy) {
+    msg.style.color = 'var(--bad)';
+    msg.textContent = B.prot === 'ps'
+      ? `Контроллер закрыт (${locked}) — прошить нельзя. Снять защиту — только ST-Link: ЗАЩИТА\\5_снять_защиту_со_стиранием.bat (стирает весь флеш, включая конфиг).`
+      : `Контроллер залочен (${locked}) — прошить нельзя. Сначала «Защита прошивки» → Unlock (стирает весь флеш, включая конфиг).`;
+  }
+  if (j.busy && !flTimer) flTimer = setInterval(() => flashRefresh(false), 700);
+  if (!j.busy && flTimer && j.state !== 'idle') { clearInterval(flTimer); flTimer = null; if (j.ok) setTimeout(() => loadAll(true), 1500); }
+}
+async function flashStart() {
+  const path = document.getElementById('fl_path').value.trim() || document.getElementById('fl_file').value;
+  if (!path) { status('выберите файл прошивки', 'err'); return; }
+  if (!confirm('Прошить контроллер файлом\n' + path + '\n\n' + (B.dfu === 'jump'
+      ? 'Контроллер сам перезапустится в DFU; если DFU не появится — BOOT0 + RESET.'
+      : 'После команды нужно будет переподключить USB.'))) return;
+  const r = await (await fetch('/flash/start', { method: 'POST', body: JSON.stringify({ path }) })).json();
+  if (!r.ok) { status('прошивка: ' + r.error, 'err'); return; }
+  status('прошивка запущена — следите за подсказками в «Инструментах»');
+  if (!flTimer) flTimer = setInterval(() => flashRefresh(false), 700);
+  flashRefresh(false);
+}
+async function flashCancel() { await fetch('/flash/cancel', { method: 'POST', body: '{}' }); flashRefresh(false); }
+
+async function resetDefaults() {
+  if (!confirm('Сбросить ВСЕ настройки (включая таблицы CAN/LIN и правила) на дефолты прошивки и сохранить?')) return;
+  S.busy = true; status('дефолты…');
+  await cmdResp({ cmd: 'defaults' });
+  const r = await cmdResp({ cmd: 'apply' }, 5000);
+  if (r.resp !== 'ok') await cmdResp({ cmd: 'discard' });
+  S.busy = false;
+  await loadAll(true);
+  if (r.resp === 'ok' && r.warn) status('дефолты записаны · ⚠ ' + r.warn, 'warn');
+  else status(r.resp === 'ok' ? 'дефолты записаны' : 'ошибка: ' + (r.msg || JSON.stringify(r)), r.resp === 'ok' ? 'ok' : 'err');
+}
+
+async function secCmd(cmd) {
+  const key = document.getElementById('sec_key').value;
+  if (!key) { status('введите ключ', 'err'); return; }
+  const un = cmd === 'sec_unlock';
+  if (!confirm(un ? 'ПАМЯТЬ БУДЕТ СТЁРТА. Снятие защиты стирает весь флеш: прошивку и конфиг. Продолжить?'
+                  : 'Включить защиту? Чтение прошивки будет заблокировано, снять — только со стиранием. Ключ вам известен?')) return;
+  if (un && !confirm('Память будет стёрта безвозвратно. Точно?')) return;
+  const r = await sendCmd({ cmd, key });
+  document.getElementById('sec_key').value = '';
+  status(r.ok ? 'отправлено — смотрите статус после перезагрузки' : 'контроллер не подключён', r.ok ? 'ok' : 'err');
+}
+
+/* =====================================================================
+ *  Живые значения (телеметрия /data, раз в 500 мс)
+ * ===================================================================== */
+function set(id, t, c) { const e = document.getElementById(id); if (!e) return; e.textContent = t; if (c !== undefined) e.className = c; }
+function fmtUp(ms) { const s = Math.floor(ms / 1000); return `${Math.floor(s / 3600)}ч ${Math.floor(s % 3600 / 60)}м ${s % 60}с`; }
+/* сравнение по пути p (p.src/ch/idx/op/val): текущее значение и результат */
+function termLiveP(p) {
+  const s = Number(v(p + '.src') || 0);
+  if (!s) return undefined;
+  const x = liveSrc(s, Number(v(p + '.ch') || 0), Number(v(p + '.idx') || 0));
+  if (x === undefined) return undefined;
+  const a = Number(v(p + '.val') || 0), op = Number(v(p + '.op') || 0);
+  return { x, ok: [x > a, x < a, x === a, x !== a, x >= a, x <= a][op] };
+}
+function termNow(i, k) { return termLiveP(`rule.${i}.t.${k}`); }
+/* результат условия tp/jp с живыми значениями; per(k, r) — вывод по сравнению */
+function evalCond(tp, jp, per, eff) {
+  return evalCondP([0, 1, 2, 3].map(k => `${tp}.${k}`), [1, 2, 3].map(k => `${jp}.${k - 1}`), per, eff);
+}
+/* то же по спискам путей сравнений и связок (joins[k-1] — связка перед сравнением k) */
+function evalCondP(paths, joins, per, eff) {
+  let any = false, orA = false, andA = false, known = true;
+  for (let k = 0; k < paths.length; k++) {
+    if (!Number(v(`${paths[k]}.src`) || 0)) continue;
+    let r = termLiveP(paths[k]);
+    if (!r) { known = false; continue; }
+    if (per) per(k, r);
+    if (eff) { const e = eff(k, r); if (e === undefined) { known = false; continue; } r = { x: r.x, ok: e }; }
+    if (!any) { andA = r.ok; any = true; }
+    else if (Number(v(joins[k - 1]) || 0) === 1) { orA = orA || andA; andA = r.ok; }
+    else andA = andA && r.ok;
+  }
+  return { any, known, res: any ? (orA || andA) : true };
+}
+/* результат сравнения-входа с настройками: разрешение g, зажигание, кнопка — фиксация из маски (бит k);
+   idp — префикс id живых полей (lv_rl<idp>_<k>, lv_g<idp>_<k>), featP — ключ-признак наличия настроек */
+function termEff(t, r, idp, k, mask, featP) {
+  if (!has(featP || `${t}.ctl`) || Number(v(t + '.src') || 0) !== 1) return r.ok;
+  const ctl = Number(v(t + '.ctl') || 0), pw = Number(v(t + '.power') || 0);
+  const g = ctl === 1 ? termLiveP(`${t}.g`) : undefined;
+  if (g) set(`lv_g${idp}_${k}`, `сейчас ${g.x} → ${g.ok ? 'да' : 'нет'}`, 'live ' + (g.ok ? 't' : 'fl'));
+  let ok = true;
+  if (Number(v(`${t}.g.src`) || 0)) ok = ok && !!(g && g.ok);
+  if (pw) { const ie = evalCond('ign.t', 'ign.join'); ok = ok && ie.any && ie.known && ie.res; }
+  if (ctl !== 1) return r.ok && ok;
+  if (mask === undefined) { set(`lv_rl${idp}_${k}`, ''); return undefined; }
+  const on = ((mask >> k) & 1) === 1 && ok;
+  set(`lv_rl${idp}_${k}`, !ok ? 'заблокировано (разрешение / зажигание)' : on ? 'фиксация: включено' : 'фиксация: выключено', 'live ' + (on ? 't' : 'fl'));
+  return on;
+}
+
+function live() {
+  const d = S.data;
+  if (!d) return;
+  const LEC = ['None', 'Stuff', 'Form', 'Ack', 'Bit1', 'Bit0', 'CRC', '—'];
+  set('ov_conn', 'есть'); set('ov_up', fmtUp(d.uptime_ms || 0)); set('ov_mode', d.mode || '—');
+  set('ov_slp', d.sleep_count); set('ov_iwdg', d.iwdg_resets);
+  if (d.ps !== undefined) {                              /* H503: PRODUCT_STATE + пароль DA в OTP */
+    const pw = d.pw ? 'пароль DA есть' : 'пароля DA нет';
+    const ps = d.ps === 'open' ? 'выкл (OPEN)' : d.ps === 'closed' ? 'вкл (CLOSED)' : d.ps;
+    set('ov_rdp', ps, 'v' + (d.ps === 'open' ? ' wtxt' : d.ps === 'closed' ? ' t' : ' btxt'));
+    set('lv_rdp', `сейчас: PRODUCT_STATE ${ps} · ${pw}`);
+  } else {
+    const rdp = d.rdp === undefined ? '—' : d.rdp === 0 ? 'выкл (RDP 0)' : d.rdp === 1 ? 'вкл (RDP 1)' : 'RDP 2 навсегда';
+    set('ov_rdp', rdp); set('lv_rdp', 'сейчас: ' + rdp);
+  }
+  if (d.wake !== undefined) set('ov_wake', (d.wake === '-' ? '—' : d.wake) + (d.wake_false ? ` · ложных ${d.wake_false}` : ''));
+  if (d.rst !== undefined) set('ov_rst', (d.rst || '—') + (d.fault ? ` · HardFault pc ${d.fault.pc}` : ''),
+                               'v' + (d.fault || d.rst === 'iwdg' ? ' btxt' : ''));
+  if (S.info.set !== undefined) set('ov_set', S.info.set || '—');
+  liveApp(d);
+  (d.in || []).forEach((x, i) => { const t = x.mode === 'off' ? 'выкл' : x.mode === 'analog' ? x.value + ' мВ' : String(x.value);
+    set('ov_in' + i, t); set('lv_in' + i, t); });
+  (d.out || []).forEach((x, i) => { const t = (x.fill / 10).toFixed(1) + ' %';
+    set('ov_out' + i, t); set('lv_out' + i, t);
+    for (const b of ['ov_ob' + i, 'lv_ob' + i]) { const e = document.getElementById(b); if (e) e.style.width = x.fill / 10 + '%'; }
+    set('ov_om' + i, S.loaded ? (has(`out.${i}.en`) && !v(`out.${i}.en`) ? '· выкл' : v(`rule.${i}.mode`) ? '· правило' : '· код') : ''); });
+  (d.dac || []).forEach((x, i) => set('lv_dac' + i, x.mv + ' мВ'));
+  (d.can || []).forEach((c, i) => {
+    const t = !c.enabled ? 'выкл' : `${c.bitrate}k${c.dbitrate ? '/' + c.dbitrate + 'k' : ''} ${c.mode}${c.silent ? ' silent' : ''} · RX ${c.rx_cnt} · TX ${c.tx_cnt} · ош ${c.err_cnt}`;
+    set('ov_can' + i, c.enabled ? `${c.bitrate}k · RX ${c.rx_cnt}` : 'выкл');
+    /* G4/H723: LEC/REC/TEC; H503: чужие кадры (FIFO1) и потери */
+    const tail = c.lec !== undefined ? ` · LEC ${LEC[c.lec] || c.lec} · REC ${c.rec} · TEC ${c.tec}`
+               : (c.bus_cnt !== undefined ? ` · чужих ${c.bus_cnt}` : '') + (c.lost_cnt !== undefined ? ` · потерь ${c.lost_cnt}` : '');
+    if (c.lec === undefined && c.lost_cnt) set('ov_can' + i, `${c.bitrate}k · RX ${c.rx_cnt} · потерь ${c.lost_cnt}`, 'v btxt');
+    if (S.sect === 'can' + i) { set('lv_can', 'сейчас: ' + t + ` · посл. кадр ${c.rx_age_ms} мс` + tail); if (S.loaded) txLive(i, d); }
+  });
+  (d.lin || []).forEach((c, i) => {
+    set('ov_lin' + i, c.enabled ? `${c.mode} · RX ${c.rx_cnt}` : 'выкл');
+    if (S.sect === 'lin' + i) {
+      set('lv_lin', 'сейчас: ' + (c.enabled ? `${c.mode} ${c.baud} · RX ${c.rx_cnt} · TX ${c.tx_cnt} · ош ${c.err_cnt} · посл. кадр ${c.rx_age_ms} мс` : 'выкл'));
+      liveSlave(c);
+    }
+  });
+  if (d.sig) {
+    const m = /^can(\d)$/.exec(S.sect), l = /^lin(\d)$/.exec(S.sect);
+    if (m && d.sig.can && d.sig.can[+m[1]]) d.sig.can[+m[1]].forEach((x, i) => set('lv_cs' + i, String(x)));
+    if (l && d.sig.lin && d.sig.lin[+l[1]]) d.sig.lin[+l[1]].forEach((x, i) => set('lv_ls' + i, String(x)));
+  }
+  if (S.sect === 'outputs' && S.loaded) for (let i = 0; i < OUT_PINS.length; i++) {
+    if (!v(`rule.${i}.mode`)) continue;
+    const ev = evalCond(`rule.${i}.t`, `rule.${i}.join`,
+      (k, r) => set(`lv_t${i}_${k}`, `сейчас ${r.x} → ${r.ok ? 'да' : 'нет'}`, 'live ' + (r.ok ? 't' : 'fl')),
+      (k, r) => termEff(`rule.${i}.t.${k}`, r, i, k, d.rl && d.rl[i] !== undefined ? Number(d.rl[i]) : undefined));
+    set('lv_rc' + i, ev.known ? (ev.res ? '· условие верно' : '· условие неверно') : '', 'live ' + (ev.res ? 't' : 'fl'));
+  }
+  set('lv_boot', d.boot_add0 === undefined ? '' : 'адрес старта: ' + (d.boot_add0 === '0800' ? 'Flash (обычная загрузка)' : d.boot_add0 + ' — загрузчик (после переподключения будет DFU)'));
+  if (S.sect === 'drl') set('lv_drl', d.drl ? drlLine(d.drl) : 'нет данных о ДХО в телеметрии (прошивка без плагина?)');
+  if (S.sect === 'sleep') {
+    if (has('ign.t.0.src')) {
+      const ie = evalCond('ign.t', 'ign.join', (k, r) => set(`lv_ig${k}`, `сейчас ${r.x} → ${r.ok ? 'да' : 'нет'}`, 'live ' + (r.ok ? 't' : 'fl')));
+      const on = ie.any && ie.known && ie.res;
+      set('lv_ign', !ie.any ? '· не задано' : !ie.known ? '' : (on ? '· включено' : '· выключено'), 'live ' + (on ? 't' : 'fl'));
+    }
+    set('lv_slp', `сейчас: ${d.mode} · засыпаний ${d.sleep_count}`
+      + (d.wake !== undefined ? ` · разбудил: ${d.wake === '-' ? '—' : d.wake}` : '') + (d.wake_false !== undefined ? ` · ложных пробуждений ${d.wake_false}` : ''));
+    /* H503: сторож в STOP. iwdg_stop = 1 — заморожен (так и надо) */
+    const w = [];
+    if (d.mode === 'no_sleep_iwdg')
+      w.push('Сон с пробуждением по LIN заблокирован (no_sleep_iwdg): в option bytes не снят IWDG_STOP — сторож тикает в STOP и сбросил бы плату, а сброс трансивера LIN будит машину.');
+    else if (d.iwdg_stop === 0)
+      w.push('В option bytes не снят IWDG_STOP: сторож тикает в STOP и сбросит плату через ~2 с сна; с пробуждением по LIN сон заблокирован.');
+    if (w.length) w.push('Лечится в STM32CubeProgrammer: Option bytes → снять IWDG_STOP (сторож заморожен в STOP).');
+    set('lv_slpw', w.join(' '), 'live btxt');
+  }
+}
+
+/* Объекты набора в телеметрии (fan/fuel/roller… — Diag_AppJson): плашка на обзоре */
+const APP_SKIP = ['fault', 'err', 'sniff', 'tx', 'sig', 'in', 'out', 'can', 'lin', 'dac', 'hs'];
+const APP_NAMES = { fan: 'вентилятор', fuel: 'баки', roller: 'ролета', drl: 'ДХО' };
+const DRL_ST = { idle: 'ждёт запуска', opening: 'открывает сессию', arming: 'включает', override: 'горит (ДХО)',
+                 closing: 'отдаёт BCM', released: 'у BCM (поворотник)', backoff: 'блок молчит, пауза' };
+function drlLine(o) {
+  if (!o.on) return 'выключены в настройках' + (o.l !== 'idle' || o.r !== 'idle' ? ` · левая: ${DRL_ST[o.l] || o.l} · правая: ${DRL_ST[o.r] || o.r}` : '');
+  const side = (n, st, vfy) => `${n}: ${DRL_ST[st] || st}` + (st === 'idle' ? '' : (vfy ? ' (с подтверждением)' : ' (вслепую)'));
+  return (o.ign ? 'двигатель работает' : 'двигатель не запущен') + ' · ' + side('левая', o.l, o.lv) + ' · ' + side('правая', o.r, o.rv);
+}
+function fmtAppVal(k, x) { return typeof x === 'number' && /_ma$/.test(k) ? (x / 1000).toFixed(2) + ' А' : String(x); }
+function appLine(k, o) {
+  if (k === 'roller')
+    return (o.state || '') + (o.dir ? ' ' + o.dir : '') + (o.i_ma !== undefined ? ` · I ${(o.i_ma / 1000).toFixed(2)} А` : '')
+         + (o.i_peak_ma !== undefined ? ` · пик ${(o.i_peak_ma / 1000).toFixed(2)} А` : '') + (o.run_ms ? ` · ${(o.run_ms / 1000).toFixed(1)} с` : '')
+         + (o.stop ? ` · стоп: ${o.stop}` : '') + (o.lockout ? ' (блокировка)' : '');
+  if (k === 'fan') {
+    const src = { off: 'выкл', ect: 'по ОЖ', tft: 'по АКПП', ecm: 'по ЭБУ', force: 'принудительно', failsafe: 'АВАРИЙНО: нет ОЖ' }[o.src] || o.src;
+    return `${o.duty}% (${src}) · ОЖ ${o.ect_ok ? o.ect + '°C' : 'нет'} · АКПП ${o.tft_ok ? o.tft + '°C' : 'нет'}`
+         + (o.rpm !== undefined ? ` · об. ${o.rpm >= 0 ? o.rpm : '—'}` : '') + (o.ecm_fan >= 0 ? ` · ЭБУ хочет ${o.ecm_fan}%` : '')
+         + (o.force ? ' · ПРИНУДИТЕЛЬНО' : '') + (o.hot ? ' · ПЕРЕГРЕВ' : '') + (o.bus === 0 ? ' · шина молчит' : '');
+  }
+  if (k === 'drl') return drlLine(o);
+  if (k === 'fuel')
+    return ({ off: 'выкл (нет зажигания)', main: 'основной', aux: 'доп.', to_aux: '→ доп. (оба)', to_main: '→ основной (оба)' }[o.state] || o.state)
+         + (o.sel !== undefined ? ` · тумблер ${o.sel ? 'доп' : 'осн'}` : '') + (o.n !== undefined ? ` · переключений ${o.n}` : '');
+  return Object.keys(o).map(x => `${x} ${typeof o[x] === 'object' ? JSON.stringify(o[x]) : fmtAppVal(x, o[x])}`).join(' · ');
+}
+function liveApp(d) {
+  const w = document.getElementById('ov_appw'), box = document.getElementById('ov_app');
+  if (!w || !box) return;
+  const keys = Object.keys(d).filter(k => !APP_SKIP.includes(k) && d[k] && typeof d[k] === 'object' && !Array.isArray(d[k]));
+  w.hidden = !keys.length;
+  const sig = keys.join(',');
+  if (box.dataset.keys !== sig) {
+    box.dataset.keys = sig;
+    box.innerHTML = keys.map(k => `<div class="tile" style="grid-column: span 2"><div class="l">${esc(APP_NAMES[k] || k)}</div><div class="num" id="ov_app_${k}" style="margin-top:2px">—</div></div>`).join('');
+  }
+  for (const k of keys) {
+    const o = d[k], bad = o.hot || o.fs || o.fault || o.stop === 'short' || o.stop === 'noload';
+    set('ov_app_' + k, appLine(k, o), 'num' + (bad ? ' btxt' : ''));
+  }
+}
+/* LIN-слейв H503: счётчики и кадры узлов из d.lin[n] (tx_cnt, bit_err, cs_err, cs_alt, lost, slave[]) */
+function liveSlave(c) {
+  const e = document.getElementById('lv_lslave');
+  if (!e) return;
+  if (!c.slave) { e.innerHTML = ''; return; }
+  let h = `<div class="row live">ответов (tx) ${c.tx_cnt} · <span class="${c.bit_err || c.cs_err ? 'btxt' : ''}">bit_err ${c.bit_err} · cs_err ${c.cs_err}</span>`
+        + (c.cs_alt ? ` · <span class="btxt">cs_alt ${c.cs_alt}: не тот тип checksum</span>` : '') + (c.lost ? ` · <span class="btxt">потеряно ${c.lost}</span>` : '') + '</div>';
+  if (c.slave.length)
+    h += '<table style="margin-top:4px"><tr><th>кадр</th><th>ID</th><th>узел</th><th>данные</th><th>кадров</th></tr>'
+       + c.slave.map(f => `<tr><td>${f.dir === 'pub' ? 'отвечаем' : 'команда'}</td><td class="num">0x${esc(f.id)}</td><td>${esc(f.nm || '')}</td>`
+         + `<td class="num">${f.n ? esc(f.d) : '—'}</td><td class="num${f.n ? '' : ' wtxt'}">${f.n}</td></tr>`).join('') + '</table>';
+  if (e.innerHTML !== h) e.innerHTML = h;
+}
+
+async function poll() {
+  try {
+    const j = await (await fetch('/data')).json();
+    const c = document.getElementById('conn');
+    if (j.connected && j.data && j.data.uptime_ms !== undefined) {
+      if (j.data.diag_overflow) {
+        /* короткий резервный кадр (не влез полный): панели оставить как были, обновить только то, что в нём есть */
+        const keep = Object.assign({}, S.data || {});
+        for (const k in j.data) if (k !== 'diag_overflow') keep[k] = j.data[k];
+        S.data = keep; S.ovf = true;
+      } else { S.data = j.data; S.ovf = false; }
+      c.textContent = '● ' + j.com_port; c.className = 'pill ok';
+    } else { c.textContent = j.connected ? '● порт открыт, данных нет' : '○ нет связи'; c.className = 'pill bad'; S.data = null; S.ovf = false; set('ov_conn', 'нет'); }
+    document.getElementById('ovf').hidden = !S.ovf;
+    live();
+  } catch (e) { const c = document.getElementById('conn'); c.textContent = 'монитор недоступен'; c.className = 'pill bad'; }
+}
+
+window.addEventListener('beforeunload', e => { if (changes().length) { e.preventDefault(); e.returnValue = ''; } });
+
+async function boot() {
+  try {
+    const b = await (await fetch('/board')).json();
+    S.hw = b; setBoard(b.name, b);
+  } catch (e) {
+    /* монитор без /board: H503 узнаём по телеметрии (ps — PRODUCT_STATE), иначе как раньше H723 */
+    let name = 'H723';
+    try { const j = await (await fetch('/data')).json(); if (j.data && j.data.ps !== undefined && j.data.rdp === undefined) name = 'H503'; } catch (e2) {}
+    setBoard(name);
+  }
+  if (!PAGES.some(p => p.id === S.sect)) S.sect = 'overview';
+}
+S.sect = (location.hash || '#overview').slice(1);
+const booted = boot().then(render);
+setInterval(poll, 500);
+/* Держать контроллер от сна, пока окно открыто: любая команда продлевает
+ * его «не спать» на 15 с (Stop_HostActivity в прошивке). */
+setInterval(() => { if (S.data) sendCmd({ cmd: 'ping' }).catch(() => {}); }, 3000);
+booted.then(() => poll()).then(async () => {
+  /* после старта контроллер мог как раз уходить в сон — ждём связь до 10 с */
+  for (let i = 0; i < 20 && !S.data; i++) await sleep(500);
+  if (S.data) await sendCmd({ cmd: 'ping' }).catch(() => {});
+  loadAll();
+});
+</script>
+</body>
+</html>

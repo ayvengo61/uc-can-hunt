@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+monitor/*/can_sessions/
+monitor/*/*.log
+*.port

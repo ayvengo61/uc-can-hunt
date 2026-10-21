@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UniversalController H503 — Monitor</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 16px;
+    background: #0d1117; color: #e6edf3;
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: 13px;
+  }
+  h1 { font-size: 16px; margin: 0 0 4px; }
+  h2 { font-size: 13px; margin: 16px 0 8px; color: #58a6ff; font-weight: 600; }
+  .top {
+    display: flex; align-items: center; gap: 16px;
+    flex-wrap: wrap; margin-bottom: 12px;
+  }
+  .pill {
+    padding: 4px 10px; border-radius: 12px; font-size: 12px;
+    background: #21262d; border: 1px solid #30363d;
+  }
+  .pill.ok  { background: #0f3320; border-color: #238636; color: #3fb950; }
+  .pill.bad { background: #3a1414; border-color: #da3633; color: #f85149; }
+  .pill.warn { background: #33280f; border-color: #9e6a03; color: #d29922; }
+  .sec-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 6px 0; }
+  .sec-row input { flex: 1; min-width: 160px; max-width: 320px; padding: 6px 8px;
+    background: #0d1117; color: #e6edf3; border: 1px solid #30363d; border-radius: 6px; }
+  .sec-row button { padding: 6px 14px; background: #21262d; color: #e6edf3;
+    border: 1px solid #30363d; border-radius: 6px; cursor: pointer; font: inherit; }
+  .sec-row button:hover { border-color: #8b949e; }
+  .sec-note { font-size: 12px; opacity: .65; line-height: 1.5; }
+  .pill.sleep { background: #1a2440; border-color: #388bfd; color: #79c0ff; }
+  .stats { display: flex; gap: 16px; flex-wrap: wrap; }
+  .stat .v { font-size: 18px; font-weight: 700; }
+  .stat .l { font-size: 11px; color: #8b949e; }
+  .grid {
+    display: grid; gap: 8px;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  }
+  .cell {
+    background: #161b22; border: 1px solid #21262d; border-radius: 6px;
+    padding: 8px 10px;
+  }
+  .cell .name { font-size: 11px; color: #8b949e; margin-bottom: 3px; }
+  .cell .val  { font-size: 15px; font-weight: 600; }
+  .cell.active { border-color: #238636; }
+  .bar {
+    height: 5px; background: #21262d; border-radius: 3px;
+    margin-top: 5px; overflow: hidden;
+  }
+  .bar > i { display: block; height: 100%; background: #388bfd; }
+  table { border-collapse: collapse; width: 100%; font-size: 12px; }
+  th, td { padding: 5px 8px; border-bottom: 1px solid #21262d; text-align: left; }
+  th { color: #8b949e; font-weight: 500; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .fresh { color: #3fb950; }
+  .stale { color: #d29922; }
+  .dead  { color: #f85149; }
+</style>
+</head>
+<body>
+  <h1>UniversalController H503 — Monitor <a href="/sniffer" style="font-size:13px;font-weight:normal;color:#58a6ff;text-decoration:none;margin-left:12px">CAN сниффер →</a></h1>
+  <div class="top">
+    <span class="pill" id="conn">подключение…</span>
+    <span class="pill" id="mode">—</span>
+    <span class="pill" id="rst" title="причина последнего сброса">rst: —</span>
+    <span class="pill" id="err" title="последний неудачный HAL-вызов (APP_CHECK)">err: —</span>
+    <span class="pill" id="ps" title="PRODUCT_STATE: OPEN = прошивка читается снаружи, CLOSED = защищена (открыть — только по SWD паролем DA, со стиранием)">защита: —</span>
+    <span class="pill" id="app" hidden title="поля приложения (Diag_AppJson)"></span>
+    <div class="stats">
+      <div class="stat"><div class="v" id="uptime">—</div><div class="l">uptime</div></div>
+      <div class="stat"><div class="v" id="sleep">—</div><div class="l">sleep count</div></div>
+      <div class="stat"><div class="v" id="frames">—</div><div class="l">frames</div></div>
+    </div>
+  </div>
+
+  <h2>Входы (8)</h2>
+  <div class="grid" id="inputs"></div>
+
+  <h2>Выходы PWM (8)</h2>
+  <div class="grid" id="outputs"></div>
+
+  <h2>CAN</h2>
+  <table id="can"><tbody></tbody></table>
+
+  <h2>LIN</h2>
+  <table id="lin"><tbody></tbody></table>
+
+  <h2>Защита прошивки</h2>
+  <div class="sec-note">
+    Состояние — плашка «защита» в шапке. Закрывают и открывают чип только ST-Link'ом по SWD,
+    скриптами из папки H_503\ЗАЩИТА (порядок ST: OPEN → PROVISIONING → пароль DA → CLOSED).
+    По USB из монитора — нельзя: в PROVISIONING прошивка не запускается.<br>
+    Снять защиту — «5_снять_защиту_со_стиранием.bat» (весь флеш стирается).
+  </div>
+
+<script>
+const $ = id => document.getElementById(id);
+
+function fmtUptime(ms){
+  const s = Math.floor(ms/1000), h = Math.floor(s/3600),
+        m = Math.floor((s%3600)/60), ss = s%60;
+  return (h?h+"ч ":"") + (m?m+"м ":"") + ss + "с";
+}
+function ageClass(ms){ return ms<1000?"fresh":ms<5000?"stale":"dead"; }
+
+function renderInputs(arr){
+  const el = $("inputs"); el.innerHTML = "";
+  (arr||[]).forEach((it,i)=>{
+    const on = it.mode!=="off" && it.value;
+    el.innerHTML += `<div class="cell ${on?'active':''}">
+      <div class="name">in${i} · ${it.mode}</div>
+      <div class="val">${it.value}</div></div>`;
+  });
+}
+function renderOutputs(arr){
+  const el = $("outputs"); el.innerHTML = "";
+  (arr||[]).forEach((it,i)=>{
+    const pct = Math.round((it.fill/1000)*100);
+    el.innerHTML += `<div class="cell ${it.fill>0?'active':''}">
+      <div class="name">out${i}${it.invert?' ·inv':''}</div>
+      <div class="val">${pct}%</div>
+      <div class="bar"><i style="width:${pct}%"></i></div></div>`;
+  });
+}
+function renderCAN(arr){
+  const it = (arr||[])[0]; const tb = $("can").querySelector("tbody");
+  if(!it){ tb.innerHTML=""; return; }
+  tb.innerHTML = `
+    <tr><th>enabled</th><td>${it.enabled?'да':'нет'}</td>
+        <th>режим</th><td>${it.mode}${it.silent?' (silent)':''}</td></tr>
+    <tr><th>битрейт</th><td>${it.bitrate} кбит</td>
+        <th>посл. кадр</th><td class="${ageClass(it.rx_age_ms)}">${it.rx_age_ms} мс</td></tr>
+    <tr><th>rx</th><td class="num">${it.rx_cnt}</td>
+        <th>tx / err</th><td class="num">${it.tx_cnt} / ${it.err_cnt}</td></tr>
+    <tr><th>bus (чужие)</th><td class="num">${it.bus_cnt!==undefined?it.bus_cnt:'—'}</td>
+        <th>lost</th><td class="num ${it.lost_cnt>0?'dead':''}">${it.lost_cnt!==undefined?it.lost_cnt:'—'}</td></tr>`;
+}
+function renderLIN(arr){
+  const it = (arr||[])[0]; const tb = $("lin").querySelector("tbody");
+  if(!it){ tb.innerHTML=""; return; }
+  tb.innerHTML = `
+    <tr><th>enabled</th><td>${it.enabled?'да':'нет'}</td>
+        <th>режим</th><td>${it.mode}</td></tr>
+    <tr><th>baud</th><td>${it.baud}</td>
+        <th>посл. кадр</th><td class="${ageClass(it.rx_age_ms)}">${it.rx_age_ms} мс</td></tr>
+    <tr><th>rx</th><td class="num">${it.rx_cnt}</td>
+        <th>err</th><td class="num ${it.err_cnt>0?'stale':''}">${it.err_cnt}</td></tr>`
+    + (it.slave ? `
+    <tr><th>ответов (tx)</th><td class="num">${it.tx_cnt}</td>
+        <th>bit_err / cs_err</th><td class="num ${(it.bit_err||it.cs_err)?'dead':''}">${it.bit_err} / ${it.cs_err}${it.cs_alt?' <span class="dead">(cs_alt '+it.cs_alt+': не тот тип checksum)</span>':''}</td></tr>`
+      + it.slave.map(f => `
+    <tr><th>${f.dir==='pub'?'отвечаем':'команда'} 0x${f.id}${f.nm?' · '+f.nm:''}</th><td class="num">${f.n?f.d:'—'}</td>
+        <th>кадров</th><td class="num ${f.n?'':'stale'}">${f.n}</td></tr>`).join('') : '');
+}
+
+function setMode(m){
+  const el = $("mode"); el.textContent = m || "—";
+  el.className = "pill" + (m==="sleeping" ? " sleep" : (m==="no_sleep_iwdg" ? " bad" : (m ? " ok" : "")));
+  el.title = (m==="no_sleep_iwdg") ? "сон по LIN запрещён: в option bytes IWDG_STOP не снят (вачдог тикает в STOP)" : "";
+}
+
+async function poll(){
+  try{
+    const r = await fetch("/data");
+    const j = await r.json();
+    const c = $("conn");
+    if(j.connected){ c.textContent = "● "+j.com_port; c.className="pill ok"; }
+    else           { c.textContent = "○ нет связи";  c.className="pill bad"; }
+    $("frames").textContent = j.frames;
+
+    const d = j.data || {};
+    if(d.uptime_ms!==undefined){
+      $("uptime").textContent = fmtUptime(d.uptime_ms);
+      $("sleep").textContent  = d.sleep_count + (d.wake && d.wake !== "-" ? " (" + d.wake + ")" : "")
+                              + (d.wake_false ? " ложн. " + d.wake_false : "");
+      setMode(d.mode);
+      if (!d.diag_overflow) { const r = $("rst"); const f = d.fault;
+        r.textContent = "rst: " + (d.rst||"—") + (f ? "  HardFault pc="+f.pc+" lr="+f.lr+" cfsr="+f.cfsr : "");
+        r.className = "pill" + ((f || d.rst==="iwdg") ? " bad" : ""); }
+      if (d.ps !== undefined) { const e = $("ps");
+        const pw = d.pw ? "пароль DA есть" : "пароля DA нет";
+        if (d.ps === "open")        { e.textContent = "защита: OFF · " + pw; e.className = "pill warn"; }
+        else if (d.ps === "closed") { e.textContent = "защита: ON (CLOSED)";  e.className = "pill ok"; }
+        else                        { e.textContent = "защита: " + d.ps + " · " + pw; e.className = "pill bad"; } }
+      { const e = $("err"); const x = d.err||{};
+        if (d.diag_overflow) { e.textContent = "diag: кадр переполнен (много TX-слотов), панели не обновляются"; e.className = "pill bad"; }
+        else {
+        e.textContent = x.count ? ("err: code "+x.code+" line "+x.line+" hal "+x.hal+" x"+x.count) : "err: нет";
+        e.className = "pill" + (x.count ? " bad" : ""); } }
+      if (!d.diag_overflow) { const a = $("app"); const r = d.roller; const f = d.fan;
+        if (r) {
+          a.hidden = false;
+          a.textContent = "ролета: " + r.state + (r.dir ? " " + r.dir : "")
+            + "  I=" + (r.i_ma/1000).toFixed(2) + " A"
+            + "  пик=" + (r.i_peak_ma/1000).toFixed(2) + " A"
+            + (r.run_ms ? "  " + (r.run_ms/1000).toFixed(1) + " с" : "")
+            + "  стоп: " + r.stop + (r.lockout ? " (блокировка)" : "");
+          a.className = "pill" + (r.state==="run" ? " ok" : (r.stop==="short"||r.stop==="noload" ? " bad" : ""));
+        } else if (f) {
+          /* вентилятор радиатора (конфиг «ВЕНТИЛЯТОР LS3 (RAM TRX)») */
+          const srcName = {off:"выкл", ect:"по ОЖ", tft:"по АКПП", ecm:"по ЭБУ", force:"принудительно", failsafe:"АВАРИЙНО: нет ОЖ"}[f.src] || f.src;
+          a.hidden = false;
+          a.textContent = "вентилятор: " + f.duty + "% (" + srcName + ")"
+            + "  ОЖ=" + (f.ect_ok ? f.ect + "°C" : "нет") + (f.ect_age>=0 && f.ect_ok ? "" : (f.ect_age<0 ? " (кадра не было)" : " (" + (f.ect_age/1000).toFixed(1) + " с)"))
+            + "  АКПП=" + (f.tft_ok ? f.tft + "°C" : (f.fault && f.bus ? "ДАТЧИК!" : "нет")) + " (" + f.r + " Ω, in0=" + f.units + ")"
+            + "  обороты=" + (f.rpm>=0 ? f.rpm : "—") + (f.run ? " ▶" : " ■")
+            + (f.ecm_fan>=0 ? "  ЭБУ хочет " + f.ecm_fan + "%" : "")
+            + (f.force ? "  ПРИНУДИТЕЛЬНО" : "") + (f.hot ? "  ПЕРЕГРЕВ" : "") + (f.bus ? "" : "  шина молчит")
+            + (d.fuel ? "  | бак: " + ({off:"выкл (нет зажигания)", main:"ОСНОВНОЙ", aux:"ДОП.", to_aux:"→ доп. (оба)", to_main:"→ основной (оба)"}[d.fuel.state] || d.fuel.state)
+                        + " тумблер=" + (d.fuel.sel ? "доп" : "осн") + " реле осн/доп=" + d.fuel.main + "/" + d.fuel.aux + " переключений " + d.fuel.n : "");
+          a.className = "pill" + ((f.hot || f.fs || f.fault) ? " bad" : (f.duty>0 ? " ok" : ""));
+        } else a.hidden = true; }
+      if (!d.diag_overflow) {       /* короткий резервный кадр: панели оставить как были */
+        renderInputs(d.in);
+        renderOutputs(d.out);
+        renderCAN(d.can);
+        renderLIN(d.lin);
+      }
+    }
+  }catch(e){
+    $("conn").textContent = "○ bridge offline";
+    $("conn").className = "pill bad";
+  }
+}
+setInterval(poll, 500);
+poll();
+</script>
+</body>
+</html>
