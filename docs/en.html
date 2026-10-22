@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UniversalController — automotive CAN FD / LIN controller</title>
+<meta name="description" content="Automotive CAN FD / LIN controller: no-code browser setup, built-in sniffer, AI-assisted signal hunting with Claude. Boards G4, H723, H503.">
+<style>
+  :root { --bg: #0d1117; --card: #161b22; --line: #30363d; --fg: #e6edf3; --mut: #9da7b3; --acc: #58a6ff; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.55 -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 16px; }
+  header { padding: 36px 0 20px; border-bottom: 1px solid var(--line); }
+  .lang { float: right; font-size: 14px; } .lang a { color: var(--acc); text-decoration: none; margin-left: 10px; }
+  h1 { font-size: 34px; margin: 0 0 8px; } h2 { font-size: 24px; margin: 40px 0 12px; } h3 { margin: 18px 0 6px; font-size: 18px; }
+  .lead { font-size: 19px; color: var(--mut); max-width: 820px; }
+  .cta { margin: 18px 0 0; } .cta a { display: inline-block; background: var(--acc); color: #0d1117; font-weight: 600; padding: 10px 18px; border-radius: 8px; text-decoration: none; margin: 4px 8px 4px 0; }
+  .cta a.sec { background: transparent; color: var(--acc); border: 1px solid var(--acc); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
+  .card h3 { margin-top: 0; }
+  figure { margin: 18px 0; } figure img { width: 100%; border: 1px solid var(--line); border-radius: 8px; } figcaption { color: var(--mut); font-size: 14px; margin-top: 6px; }
+  table { border-collapse: collapse; width: 100%; } th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); } th { color: var(--mut); font-weight: 600; font-size: 14px; }
+  .note { background: #1f2a1f; border: 1px solid #2e4a2e; border-radius: 8px; padding: 12px 14px; }
+  .warn { background: #2a2314; border: 1px solid #5a4a1a; border-radius: 8px; padding: 12px 14px; }
+  code { background: #1f252d; padding: 1px 5px; border-radius: 4px; }
+  footer { margin: 50px 0 30px; color: var(--mut); font-size: 14px; border-top: 1px solid var(--line); padding-top: 16px; }
+  a { color: var(--acc); }
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="lang"><a href="index.html">Русский</a></div>
+  <h1>UniversalController</h1>
+  <p class="lead">A CAN FD / LIN controller for car add-ons: it reads bus signals and drives loads by your rules. Set up in a
+  browser, no coding. A sniffer is built in, and Claude guides the signal hunting.</p>
+  <div class="cta">
+    <a href="#buy">Where to buy</a>
+    <a class="sec" href="https://github.com/ayvengo61/uc-can-hunt/blob/main/EN/GUIDE.md">Guide</a>
+    <a class="sec" href="https://github.com/ayvengo61/uc-can-hunt">Monitor and plugin on GitHub</a>
+  </div>
+</header>
+
+<h2>What it does</h2>
+<div class="grid">
+  <div class="card"><h3>Rules instead of code</h3>Every output switches by a condition: up to four AND/OR comparisons on
+  inputs, CAN/LIN signals and other outputs. Momentary buttons, ignition-gated modes, delays, soft start, PWM.</div>
+  <div class="card"><h3>Frames to the bus, CAN Hacker style</h3>Bytes right in the row, period, trigger condition and a start
+  delay for strict ordering. For example: open a UDS session, then switch the DRL on.</div>
+  <div class="card"><h3>CAN / CAN FD / LIN sniffer</h3>Live stream on the laptop, by-ID view with change highlighting,
+  recording to file, bit-level frame view.</div>
+  <div class="card"><h3>Signal hunting with Claude</h3>An open Claude Code plugin: the AI puts instructions on the screen
+  ("hold 2000 rpm"), records the bus, finds the frame and bit, then shows the live value for confirmation.</div>
+  <div class="card"><h3>No battery drain</h3>Sleeps when the bus and inputs are quiet, wakes from the first frame or an
+  input.</div>
+  <div class="card"><h3>USB updates</h3>Firmware updates from the settings page; settings are preserved.</div>
+</div>
+
+<h2>What it looks like</h2>
+<figure><img src="img/settings_outputs.png" alt="Settings page: outputs and rules"><figcaption>Outputs and rules: AND/OR
+conditions, momentary button, ignition-gated mode. Everything is edited in the browser and written to the board.
+(The UI is in Russian; the guide translates every control.)</figcaption></figure>
+<figure><img src="img/assist.png" alt="Working together with Claude"><figcaption>Collaboration page: Claude's instruction
+in large type, answer buttons, the live value of the found signal next to the dashboard.</figcaption></figure>
+<figure><img src="img/sniffer.png" alt="CAN sniffer"><figcaption>Sniffer: frames by ID, period, changed bytes highlighted,
+recording to file.</figcaption></figure>
+<figure><img src="img/overview.png" alt="Board overview"><figcaption>Overview: inputs, outputs, CAN and LIN state, sleep,
+firmware protection.</figcaption></figure>
+
+<h2>Boards</h2>
+<table>
+  <tr><th>Board</th><th>Buses</th><th>Outputs</th><th>Inputs</th><th>Best for</th></tr>
+  <tr><td><b>H503</b></td><td>1 × CAN FD, 1 × LIN</td><td>8 (PWM)</td><td>8</td><td>typical add-ons on one bus, compact</td></tr>
+  <tr><td><b>G4</b></td><td>3 × CAN FD, 2 × LIN</td><td>12 (PWM)</td><td>8</td><td>several buses, UDS diagnostics, complex projects</td></tr>
+  <tr><td><b>H723</b></td><td>3 × CAN FD, 2 × LIN</td><td>12 (PWM)</td><td>8</td><td>the same with extra headroom</td></tr>
+</table>
+<p class="note">Field-proven: RAM 1500 / TRX (DRL from turn signals over UDS, roller shutter, fan), Toyota Tundra (fuel
+tank switch), Nissan Patrol (sub-tank transfer), LIN nodes.</p>
+
+<h2 id="buy">Where to buy, contact</h2>
+<div class="card">
+  <p>Boards ship flashed, with a guide. Store links will appear here as the storefronts open.</p>
+  <p>Until then, questions and orders go through the repository
+  <a href="https://github.com/ayvengo61/uc-can-hunt/issues">Issues</a>. Mention the board, your car make and year and the
+  task; we will tell you whether it fits and which signals you will need.</p>
+</div>
+<p class="warn">The controller is for accessory circuits. Safety systems (airbags, ABS, steering, brakes) are not
+supported. Installation by an auto-electrics professional, fused supply.</p>
+
+<h2>Monitor and plugin</h2>
+<p>The Windows monitor (overview, settings, sniffer, collaboration) and the Claude Code plugin live in the open repository
+<a href="https://github.com/ayvengo61/uc-can-hunt">github.com/ayvengo61/uc-can-hunt</a>. Plugin install:
+<code>/plugin marketplace add ayvengo61/uc-can-hunt</code>, then <code>/plugin install uc-can-hunt@uc-tools</code>.
+Working with Claude needs Claude Code (a paid Claude Pro/Max plan or API billing) and Python; everything else works
+without them.</p>
+
+<footer>UniversalController · <a href="https://github.com/ayvengo61/uc-can-hunt">GitHub</a> · <a href="index.html">Русский</a></footer>
+</div>
+</body>
+</html>

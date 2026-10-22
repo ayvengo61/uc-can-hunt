@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UniversalController — контроллер CAN/LIN для автомобиля</title>
+<meta name="description" content="Автомобильный контроллер CAN FD / LIN: настройка в браузере без программирования, встроенный сниффер, поиск сигналов вместе с Claude. Платы G4, H723, H503.">
+<style>
+  :root { --bg: #0d1117; --card: #161b22; --line: #30363d; --fg: #e6edf3; --mut: #9da7b3; --acc: #58a6ff; --ok: #3fb950; --warn: #d29922; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.55 -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 16px; }
+  header { padding: 36px 0 20px; border-bottom: 1px solid var(--line); }
+  .lang { float: right; font-size: 14px; } .lang a { color: var(--acc); text-decoration: none; margin-left: 10px; }
+  h1 { font-size: 34px; margin: 0 0 8px; } h2 { font-size: 24px; margin: 40px 0 12px; } h3 { margin: 18px 0 6px; font-size: 18px; }
+  .lead { font-size: 19px; color: var(--mut); max-width: 820px; }
+  .cta { margin: 18px 0 0; } .cta a { display: inline-block; background: var(--acc); color: #0d1117; font-weight: 600; padding: 10px 18px; border-radius: 8px; text-decoration: none; margin: 4px 8px 4px 0; }
+  .cta a.sec { background: transparent; color: var(--acc); border: 1px solid var(--acc); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
+  .card h3 { margin-top: 0; }
+  figure { margin: 18px 0; } figure img { width: 100%; border: 1px solid var(--line); border-radius: 8px; } figcaption { color: var(--mut); font-size: 14px; margin-top: 6px; }
+  table { border-collapse: collapse; width: 100%; } th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); } th { color: var(--mut); font-weight: 600; font-size: 14px; }
+  .note { background: #1f2a1f; border: 1px solid #2e4a2e; border-radius: 8px; padding: 12px 14px; }
+  .warn { background: #2a2314; border: 1px solid #5a4a1a; border-radius: 8px; padding: 12px 14px; }
+  code { background: #1f252d; padding: 1px 5px; border-radius: 4px; }
+  footer { margin: 50px 0 30px; color: var(--mut); font-size: 14px; border-top: 1px solid var(--line); padding-top: 16px; }
+  a { color: var(--acc); }
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="lang"><a href="en.html">English</a></div>
+  <h1>UniversalController</h1>
+  <p class="lead">Контроллер CAN FD / LIN для доработок автомобиля: читает сигналы шины и управляет нагрузками по вашим
+  правилам. Настраивается в браузере, программировать не нужно. Внутри сниффер, а поиск сигналов ведёт Claude.</p>
+  <div class="cta">
+    <a href="#buy">Где купить</a>
+    <a class="sec" href="https://github.com/ayvengo61/uc-can-hunt/blob/main/RU/ИНСТРУКЦИЯ.md">Инструкция</a>
+    <a class="sec" href="https://github.com/ayvengo61/uc-can-hunt">Монитор и плагин на GitHub</a>
+  </div>
+</header>
+
+<h2>Что он умеет</h2>
+<div class="grid">
+  <div class="card"><h3>Правила вместо кода</h3>Каждый выход включается по условию: до четырёх сравнений с И/ИЛИ по входам,
+  сигналам CAN/LIN и другим выходам. Кнопки без фиксации, работа по зажиганию, задержки, плавный пуск, ШИМ.</div>
+  <div class="card"><h3>Кадры в шину как в CAN Hacker</h3>Байты прямо в строке, период, условие запуска и задержка пуска для
+  строгой очерёдности. Например: открыть сессию UDS, затем включить ДХО.</div>
+  <div class="card"><h3>Сниффер CAN / CAN FD / LIN</h3>Живой поток на ноутбуке, вид по ID с подсветкой изменений, запись в
+  файл, разбор кадра по битам.</div>
+  <div class="card"><h3>Поиск сигналов с Claude</h3>Открытый плагин для Claude Code: ИИ даёт инструкции на экран («подними
+  обороты до 2000»), пишет шину и сам находит нужный кадр и бит, потом показывает живое значение для проверки.</div>
+  <div class="card"><h3>Не разряжает аккумулятор</h3>Сон при тишине в шине и на входах, пробуждение от первого кадра или от
+  входа.</div>
+  <div class="card"><h3>Обновление по USB</h3>Прошивка обновляется кнопкой со страницы настроек, настройки сохраняются.</div>
+</div>
+
+<h2>Как это выглядит</h2>
+<figure><img src="img/settings_outputs.png" alt="Страница настроек: выходы и правила"><figcaption>Выходы и правила: условия
+И/ИЛИ, кнопка без фиксации, режим по зажиганию. Всё меняется в браузере и записывается в плату.</figcaption></figure>
+<figure><img src="img/assist.png" alt="Совместная работа с Claude"><figcaption>Совместная работа: инструкция от Claude крупно,
+кнопки ответа, живое значение найденного сигнала рядом с приборкой.</figcaption></figure>
+<figure><img src="img/sniffer.png" alt="Сниффер CAN"><figcaption>Сниффер: кадры по ID, период, подсветка изменившихся
+байтов, запись в файл.</figcaption></figure>
+<figure><img src="img/overview.png" alt="Обзор платы"><figcaption>Обзор: входы, выходы, состояние шин CAN и LIN, сон,
+защита прошивки.</figcaption></figure>
+
+<h2>Платы</h2>
+<table>
+  <tr><th>Плата</th><th>Шины</th><th>Выходы</th><th>Входы</th><th>Для чего</th></tr>
+  <tr><td><b>H503</b></td><td>1 × CAN FD, 1 × LIN</td><td>8 (ШИМ)</td><td>8</td><td>типовые доработки на одной шине, компактно</td></tr>
+  <tr><td><b>G4</b></td><td>3 × CAN FD, 2 × LIN</td><td>12 (ШИМ)</td><td>8</td><td>несколько шин, диагностика UDS, сложные проекты</td></tr>
+  <tr><td><b>H723</b></td><td>3 × CAN FD, 2 × LIN</td><td>12 (ШИМ)</td><td>8</td><td>то же с запасом по мощности</td></tr>
+</table>
+<p class="note">Проверено в реальных машинах: RAM 1500 / TRX (ДХО из поворотников через UDS, ролета, вентилятор),
+Toyota Tundra (переключатель баков), Nissan Patrol (перекачка из дополнительного бака), узлы LIN.</p>
+
+<h2 id="buy">Где купить и как связаться</h2>
+<div class="card">
+  <p>Платы поставляются прошитыми, с инструкцией. Ссылки на магазины появятся здесь по мере открытия витрин.</p>
+  <p>Пока вопросы и заказ: через <a href="https://github.com/ayvengo61/uc-can-hunt/issues">Issues репозитория</a>. Укажите плату,
+  марку и год машины и задачу, подскажем, подойдёт ли и какие сигналы понадобятся.</p>
+</div>
+<p class="warn">Контроллер предназначен для дополнительного оборудования. Цепи безопасности (подушки, ABS, рулевое,
+тормоза) не поддерживаются. Установку выполняет специалист по автоэлектрике, питание через предохранитель.</p>
+
+<h2>Монитор и плагин</h2>
+<p>Программа-монитор для Windows (обзор, настройки, сниффер, совместная работа) и плагин для Claude Code лежат в
+открытом репозитории <a href="https://github.com/ayvengo61/uc-can-hunt">github.com/ayvengo61/uc-can-hunt</a>.
+Установка плагина: <code>/plugin marketplace add ayvengo61/uc-can-hunt</code>, затем
+<code>/plugin install uc-can-hunt@uc-tools</code>. Для работы с Claude нужны Claude Code (платный план Claude Pro/Max
+или оплата через API) и Python; остальное работает без них.</p>
+
+<footer>UniversalController · <a href="https://github.com/ayvengo61/uc-can-hunt">GitHub</a> · <a href="en.html">English</a></footer>
+</div>
+</body>
+</html>

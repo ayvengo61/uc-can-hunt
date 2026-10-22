@@ -25,6 +25,15 @@ Easiest: run `EN\SETUP.bat`: it checks Python, installs packages and connects th
 Нужны Windows, Python 3 с `numpy` и `pillow`, Claude Code (платный план Claude Pro/Max или оплата через API). Платы поставляются прошитыми.
 Requires Windows, Python 3 with `numpy` and `pillow`, Claude Code (paid Claude Pro/Max plan or API billing). Boards ship flashed.
 
+## Где купить и как связаться / Where to buy, contact
+
+Страница продукта со скриншотами: https://ayvengo61.github.io/uc-can-hunt/ — там же появятся ссылки на магазины.
+Пока магазины открываются, вопросы и заказ — через [Issues](https://github.com/ayvengo61/uc-can-hunt/issues) этого
+репозитория (укажите плату, марку и год машины, задачу). /
+Product page with screenshots: https://ayvengo61.github.io/uc-can-hunt/ — store links will appear there. Until the
+stores open, questions and orders go through this repository's [Issues](https://github.com/ayvengo61/uc-can-hunt/issues)
+(board, car make/year, task).
+
 ## Состав / Contents
 
 - `monitor/<G4|H723|H503>/` — монитор платы: exe и страницы (обзор, настройки, сниффер, совместная работа); записи
