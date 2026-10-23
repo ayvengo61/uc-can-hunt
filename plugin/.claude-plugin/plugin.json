@@ -1,6 +1,6 @@
 {
   "name": "uc-can-hunt",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Collaborative CAN signal hunting for cars with the UniversalController sniffer: Claude guides you inside the car, records the bus and finds the frame and bit (RPM, speed, pedals, buttons, doors). Совместный поиск сигналов в CAN машины с контроллером UniversalController.",
   "author": {
     "name": "ayvengo61"

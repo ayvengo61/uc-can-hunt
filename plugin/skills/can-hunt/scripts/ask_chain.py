@@ -43,12 +43,12 @@ def main():
             continue
         text, _, buttons = line.partition("||")
         steps.append((text.strip(), buttons.strip()))
-    env = dict(os.environ, PYTHONIOENCODING="utf-8")
+    # окружение дочернему процессу не копируем (наследуется само); UTF-8 на stdout — флагом python -X utf8
     for n, (text, buttons) in enumerate(steps, 1):
-        cmd = [sys.executable, os.path.join(HERE, "car.py")] + port + ["ask", text] + timeout
+        cmd = [sys.executable, "-X", "utf8", os.path.join(HERE, "car.py")] + port + ["ask", text] + timeout
         if buttons:
             cmd += ["--buttons", buttons]
-        r = subprocess.run(cmd, capture_output=True, env=env)
+        r = subprocess.run(cmd, capture_output=True)
         out = r.stdout.decode("utf-8", "replace").strip()
         answer = [l for l in out.splitlines() if not l.startswith("  кнопки") and not l.startswith("Жду ")]
         print("[%d/%d] %s" % (n, len(steps), " | ".join(answer)[-400:]))

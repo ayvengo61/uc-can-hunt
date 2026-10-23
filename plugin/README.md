@@ -21,6 +21,10 @@ against the dashboard, and writes a description plus a firmware config line.
   sniffer, start and stop a recording, show an instruction on the user's page, wait for the user's button press.
 - `scripts/canhunt.py` analyses recordings that the monitor saved locally (`can_sessions/` next to the monitor).
 - Nothing is sent to the internet. Findings are written to `can_hunt_found/` in your project folder.
+- The scripts read only these environment variables: `UC_PORT`, `CANHUNT_PORTS`, `CANHUNT_SESSIONS`, `CANHUNT_STATE`,
+  `CANHUNT_CACHE`, `CANHUNT_NO_CACHE`, `CANHUNT_LINK_GRACE` (port and folder overrides, all optional) and
+  `LOCALAPPDATA` / `WINDIR` (where to keep a small state file and find a font for plots). No credentials, tokens or
+  keys are read, stored or transmitted.
 - Transmitting frames into the car is a separate mode that the skill enables only on explicit request and only while
   parked.
 
