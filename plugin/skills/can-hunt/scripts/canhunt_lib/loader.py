@@ -24,7 +24,7 @@ PARSER_VERSION = "3"
 
 # Где лежат записи мониторов (папка can_sessions рядом с exe). Пакет плагина: <корень>/monitor/<плата>/can_sessions;
 # переменная CANHUNT_SESSIONS (список папок через os.pathsep) — любое другое место; старая раскладка CUBE — на всякий случай.
-ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", ".."))  # корень плагина
+ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", "..", ".."))  # корень пакета (над plugin/)
 MONITOR_SESSION_DIRS = [p for p in os.environ.get("CANHUNT_SESSIONS", "").split(os.pathsep) if p] + [
     os.path.join(ROOT, "monitor", b, "can_sessions") for b in ("G4", "H723", "H503")] + [
     os.path.join(ROOT, "UnivrsalController-G4", "МОНИТОР", "can_sessions"),

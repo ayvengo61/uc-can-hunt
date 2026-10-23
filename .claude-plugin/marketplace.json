@@ -6,7 +6,7 @@
   "plugins": [
     {
       "name": "uc-can-hunt",
-      "source": "./",
+      "source": "./plugin",
       "description": "Совместный поиск сигналов в CAN машины через монитор UniversalController (G4/H723/H503)."
     }
   ],

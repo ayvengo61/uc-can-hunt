@@ -9,6 +9,13 @@ CAN-шине автомобиля. / UniversalController monitor and a Claude Co
                                   Claude Code: навык can-hunt
 ```
 
+**UniversalController** is an automotive CAN FD / LIN controller for car add-ons: a no-code browser-based
+configurator (signal tables, output rules with AND/OR conditions, frame transmission like CAN Hacker), a built-in
+CAN / CAN FD / LIN sniffer, sleep mode without battery drain, and **AI-assisted signal hunting** with Claude Code. Boards:
+H503 (1×CAN FD, 1×LIN, 8 outputs), G4 and H723 (3×CAN FD, 2×LIN, 12 outputs). Use cases: DRL from turn signals over UDS,
+fan by coolant temperature, roller shutter, fuel tank switch, LIN node emulation. Keywords: CAN bus controller, CAN FD
+sniffer, LIN, UDS, car hacking, reverse engineering, STM32, Claude Code plugin, no-code automotive controller.
+
 - **По-русски:** папка `RU` — [ИНСТРУКЦИЯ.md](RU/ИНСТРУКЦИЯ.md) и установщик `УСТАНОВКА.bat` — скачать, запустить, настройки, сниффер, прошивка, работа с Claude.
 - **In English:** folder `EN` — [GUIDE.md](EN/GUIDE.md) and the `SETUP.bat` installer — download, run, settings, sniffer, flashing, working with Claude.
 
@@ -38,7 +45,8 @@ stores open, questions and orders go through this repository's [Issues](https://
 
 - `monitor/<G4|H723|H503>/` — монитор платы: exe и страницы (обзор, настройки, сниффер, совместная работа); записи
   шины появляются рядом в `can_sessions/`. / Board monitor: exe and pages; recordings go to `can_sessions/` next to it.
-- `skills/can-hunt/` — навык для Claude Code: методика, контракт монитора, сценарии по сигналам, скрипты. /
-  Claude Code skill: method, monitor contract, per-signal playbook, scripts.
+- `plugin/` — плагин Claude Code (манифест, навык `can-hunt`: методика, контракт монитора, сценарии по сигналам,
+  скрипты). Именно эта папка ставится как плагин и подаётся в каталоги. / The Claude Code plugin (manifest, the
+  `can-hunt` skill: method, monitor contract, per-signal playbook, scripts). This folder is what gets installed and listed.
 
 Исходники прошивок и мониторов в пакет не входят. / Firmware and monitor sources are not part of this package.
